@@ -1,0 +1,44 @@
+{
+  "abilities": [
+    {
+      "id": "team_heal",
+      "name": "Team Heal",
+      "description": "Restore HP to all allied units.",
+      "cooldown_turns": 5,
+      "effect": "heal_all",
+      "value": 15,
+      "color": "#33ff66",
+      "icon": "+"
+    },
+    {
+      "id": "iron_skin",
+      "name": "Iron Skin",
+      "description": "Reduce all incoming damage for 3 turns.",
+      "cooldown_turns": 6,
+      "effect": "damage_shield",
+      "value": 3,
+      "color": "#3388ff",
+      "icon": "S"
+    },
+    {
+      "id": "tiger_fury",
+      "name": "Tiger Fury",
+      "description": "Double all attack damage for 2 turns.",
+      "cooldown_turns": 4,
+      "effect": "damage_boost",
+      "value": 2,
+      "color": "#ff6600",
+      "icon": "F"
+    },
+    {
+      "id": "auto_block",
+      "name": "Auto-Block",
+      "description": "Automatically defend the next incoming attack.",
+      "cooldown_turns": 3,
+      "effect": "auto_defend",
+      "value": 1,
+      "color": "#6699ff",
+      "icon": "B"
+    }
+  ]
+}

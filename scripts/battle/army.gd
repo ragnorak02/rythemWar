@@ -1,0 +1,96 @@
+extends Node2D
+## Army — spawns and manages 6 units in a stagger formation.
+
+var army_side: String = "player"  # "player" or "enemy"
+var units: Array = []
+var alive_count: int = 6
+
+const UNIT_COUNT := 6
+const UNIT_SCENE := preload("res://scenes/units/Unit.tscn")
+
+# Stagger layout: 2 columns, 3 rows — organic formation
+const FORMATION := [
+	Vector2(0, -50),   # front top
+	Vector2(0, 0),     # front mid
+	Vector2(0, 50),    # front bottom
+	Vector2(-40, -30), # back top
+	Vector2(-40, 20),  # back mid
+	Vector2(-40, 60),  # back bottom
+]
+
+const PLAYER_COLOR := Color(0.25, 0.45, 0.85)  # Blue
+const ENEMY_COLOR := Color(0.85, 0.25, 0.25)   # Red
+
+func setup(side: String) -> void:
+	army_side = side
+	var base_color: Color = PLAYER_COLOR if side == "player" else ENEMY_COLOR
+
+	for i in UNIT_COUNT:
+		var unit_node: Node2D = UNIT_SCENE.instantiate()
+		add_child(unit_node)
+
+		var offset: Vector2 = FORMATION[i]
+		if side == "enemy":
+			offset.x *= -1  # Mirror for enemy side
+
+		unit_node.position = offset
+		# Slight color variation per unit
+		var color_variation := base_color.lightened(randf_range(-0.05, 0.1))
+		unit_node.setup(i, side, color_variation)
+		unit_node.unit_died.connect(_on_unit_died)
+		units.append(unit_node)
+
+	alive_count = UNIT_COUNT
+
+func get_alive_units() -> Array:
+	return units.filter(func(u): return u.is_alive)
+
+func get_front_unit() -> Node2D:
+	## Returns the first alive unit (front-line)
+	for unit in units:
+		if unit.is_alive:
+			return unit
+	return null
+
+func get_random_alive_unit() -> Node2D:
+	var alive := get_alive_units()
+	if alive.is_empty():
+		return null
+	return alive[randi() % alive.size()]
+
+func is_defeated() -> bool:
+	return alive_count <= 0
+
+func get_total_hp() -> int:
+	var total := 0
+	for unit in units:
+		if unit.is_alive:
+			total += unit.hp
+	return total
+
+func get_max_total_hp() -> int:
+	return UNIT_COUNT * 100
+
+func heal_all(amount: int) -> void:
+	for unit in units:
+		unit.heal(amount)
+
+func apply_damage_boost_all(turns: int) -> void:
+	for unit in units:
+		if unit.is_alive:
+			unit.apply_damage_boost(turns)
+
+func apply_shield_all(turns: int) -> void:
+	for unit in units:
+		if unit.is_alive:
+			unit.apply_shield(turns)
+
+func tick_all_buffs() -> void:
+	for unit in units:
+		if unit.is_alive:
+			unit.tick_buffs()
+
+func _on_unit_died() -> void:
+	alive_count -= 1
+	if alive_count <= 0:
+		Events.army_defeated.emit(army_side)

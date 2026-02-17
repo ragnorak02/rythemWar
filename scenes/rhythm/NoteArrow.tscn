@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://cxnote1arrow"]
+
+[ext_resource type="Script" path="res://scripts/rhythm/note_arrow.gd" id="1_arrow"]
+
+[node name="NoteArrow" type="Node2D"]
+script = ExtResource("1_arrow")

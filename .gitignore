@@ -1,0 +1,14 @@
+# Godot
+.godot/
+*.uid
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude
+.claude/
+
+# Test output
+tests/test-results.json

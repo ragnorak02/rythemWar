@@ -1,0 +1,27 @@
+{
+  "id": "rythemWar",
+  "title": "RhythmWar",
+  "subtitle": "2D Rhythm Battler",
+  "engine": "Godot 4.6",
+  "genre": "Rhythm / Strategy",
+  "description": "Command your army through rhythm! Two armies clash on the battlefield while you input rhythm commands to attack and defend. Perfect timing means devastating attacks, while misses leave you vulnerable.",
+  "status": "in-development",
+  "version": "0.1.0",
+  "launch": {
+    "type": "godot",
+    "main_scene": "scenes/Main.tscn"
+  },
+  "features": [
+    "Rhythm-based combat",
+    "2-player local versus",
+    "Multiple difficulty stages",
+    "Special abilities with cooldowns",
+    "Achievement system",
+    "Xbox controller support"
+  ],
+  "controls": {
+    "keyboard_p1": "A/S/D/F (face buttons), W/X/Z/C (directions), Shift (modifier)",
+    "keyboard_p2": "I/J/K/L (face buttons), Arrow keys (directions), Ctrl (modifier)",
+    "controller": "A/B/X/Y (face), D-pad (directions), RT (modifier)"
+  }
+}

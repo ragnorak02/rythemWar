@@ -1,0 +1,33 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; but it can also be edited via script.
+
+[application]
+
+config/name="RhythmWar"
+config/description="2D Rhythm Battler — command your army through rhythm!"
+run/main_scene="res://scenes/MainMenu.tscn"
+config/features=PackedStringArray("4.6", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[autoload]
+
+Conductor="*res://scripts/autoload/conductor.gd"
+Events="*res://scripts/autoload/events.gd"
+GameManager="*res://scripts/autoload/game_manager.gd"
+InputSetup="*res://scripts/autoload/input_setup.gd"
+SaveManager="*res://scripts/autoload/save_manager.gd"
+AchievementManager="*res://scripts/autoload/achievement_manager.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/canvas_textures/default_texture_filter=0

@@ -1,0 +1,68 @@
+{
+  "achievements": [
+    {
+      "id": "first_beat",
+      "title": "First Beat",
+      "description": "Win your first battle.",
+      "condition": "battles_won",
+      "target": 1,
+      "icon": "1"
+    },
+    {
+      "id": "perfect_storm",
+      "title": "Perfect Storm",
+      "description": "Land 10 Perfect hits in a single battle.",
+      "condition": "perfects_in_battle",
+      "target": 10,
+      "icon": "P"
+    },
+    {
+      "id": "combo_master",
+      "title": "Combo Master",
+      "description": "Achieve a 20-hit combo.",
+      "condition": "max_combo",
+      "target": 20,
+      "icon": "C"
+    },
+    {
+      "id": "iron_defense",
+      "title": "Iron Defense",
+      "description": "Successfully block 5 times in one battle.",
+      "condition": "blocks_in_battle",
+      "target": 5,
+      "icon": "D"
+    },
+    {
+      "id": "flawless_victory",
+      "title": "Flawless Victory",
+      "description": "Win a battle with 100% accuracy.",
+      "condition": "perfect_accuracy_win",
+      "target": 1,
+      "icon": "F"
+    },
+    {
+      "id": "duo_harmony",
+      "title": "Duo Harmony",
+      "description": "Complete a 2-player battle.",
+      "condition": "2p_battles",
+      "target": 1,
+      "icon": "2"
+    },
+    {
+      "id": "war_drum",
+      "title": "War Drum",
+      "description": "Complete all three difficulty stages.",
+      "condition": "stages_cleared",
+      "target": 3,
+      "icon": "W"
+    },
+    {
+      "id": "super_striker",
+      "title": "Super Striker",
+      "description": "Land 5 Super Strikes in a single battle.",
+      "condition": "super_strikes_in_battle",
+      "target": 5,
+      "icon": "S"
+    }
+  ]
+}
