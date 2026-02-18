@@ -1,6 +1,7 @@
 extends Node2D
 ## Unit — individual soldier in an army.
 ## State machine: IDLE, ATTACK_CUE, ATTACKING, DEFEND_CUE, DEFENDING, HIT, DEAD
+## Graphics V1: custom _draw() soldier silhouette with idle bob, attack, hurt, death anims.
 
 enum State { IDLE, ATTACK_CUE, ATTACKING, DEFEND_CUE, DEFENDING, HIT, DEAD }
 
@@ -16,13 +17,20 @@ var defense: int = 5
 var is_alive: bool = true
 
 var _state: State = State.IDLE
-var _body_rect: ColorRect = null
-var _hp_bar_bg: ColorRect = null
-var _hp_bar_fill: ColorRect = null
 var _flash_timer: float = 0.0
 var _original_color: Color = Color.WHITE
+var _draw_color: Color = Color.WHITE
 var _damage_boost_turns: int = 0
 var _shield_turns: int = 0
+
+# Visual state for _draw()
+var _idle_bob: float = 0.0
+var _shield_alpha: float = 0.0
+var _boost_alpha: float = 0.0
+
+# HP bar nodes (still ColorRect for clean UI rendering)
+var _hp_bar_bg: ColorRect = null
+var _hp_bar_fill: ColorRect = null
 
 const BODY_SIZE := Vector2(24, 36)
 const HP_BAR_WIDTH := 28.0
@@ -35,21 +43,14 @@ func setup(p_index: int, p_side: String, p_color: Color) -> void:
 	unit_index = p_index
 	army_side = p_side
 	_original_color = p_color
-	if _body_rect:
-		_body_rect.color = p_color
+	_draw_color = p_color
+	queue_redraw()
 
 func _build_visuals() -> void:
-	# Body
-	_body_rect = ColorRect.new()
-	_body_rect.size = BODY_SIZE
-	_body_rect.position = -BODY_SIZE / 2
-	_body_rect.color = _original_color
-	add_child(_body_rect)
-
 	# HP bar background
 	_hp_bar_bg = ColorRect.new()
 	_hp_bar_bg.size = Vector2(HP_BAR_WIDTH, HP_BAR_HEIGHT)
-	_hp_bar_bg.position = Vector2(-HP_BAR_WIDTH / 2, -BODY_SIZE.y / 2 - 8)
+	_hp_bar_bg.position = Vector2(-HP_BAR_WIDTH / 2, -BODY_SIZE.y / 2 - 10)
 	_hp_bar_bg.color = Color(0.2, 0.2, 0.2, 0.8)
 	add_child(_hp_bar_bg)
 
@@ -60,12 +61,106 @@ func _build_visuals() -> void:
 	_hp_bar_fill.color = Color(0.2, 0.9, 0.3)
 	add_child(_hp_bar_fill)
 
+	# HP bar border
+	var hp_border := ColorRect.new()
+	hp_border.size = Vector2(HP_BAR_WIDTH + 2, HP_BAR_HEIGHT + 2)
+	hp_border.position = _hp_bar_bg.position - Vector2(1, 1)
+	hp_border.color = Color(0.4, 0.4, 0.5, 0.6)
+	hp_border.z_index = -1
+	add_child(hp_border)
+
 func _process(delta: float) -> void:
+	# Idle bob animation
+	if _state == State.IDLE and is_alive:
+		_idle_bob = sin(Time.get_ticks_msec() * 0.003 + unit_index * 1.2) * 2.0
+	else:
+		_idle_bob = 0.0
+
+	# Flash timer
 	if _flash_timer > 0:
 		_flash_timer -= delta
-		_body_rect.color = Color.WHITE if fmod(_flash_timer, 0.1) > 0.05 else _original_color
+		_draw_color = Color.WHITE if fmod(_flash_timer, 0.1) > 0.05 else _original_color
 		if _flash_timer <= 0:
-			_body_rect.color = _original_color
+			_draw_color = _original_color
+
+	# Buff visual alpha decay
+	if _shield_turns > 0:
+		_shield_alpha = 0.3
+	else:
+		_shield_alpha = move_toward(_shield_alpha, 0.0, delta * 2.0)
+
+	if _damage_boost_turns > 0:
+		_boost_alpha = 0.4
+	else:
+		_boost_alpha = move_toward(_boost_alpha, 0.0, delta * 2.0)
+
+	queue_redraw()
+
+func _draw() -> void:
+	var facing: float = 1.0 if army_side == "player" else -1.0
+	var bob := Vector2(0, _idle_bob)
+
+	# --- Shadow (ellipse on ground) ---
+	var shadow_color := Color(0.0, 0.0, 0.0, 0.3)
+	draw_ellipse_custom(Vector2(0, BODY_SIZE.y / 2 + 2), Vector2(10, 4), shadow_color)
+
+	# --- Legs (two small rects) ---
+	var leg_color := _draw_color.darkened(0.3)
+	var leg_w := 5.0
+	var leg_h := 10.0
+	var leg_y := BODY_SIZE.y / 2 - leg_h + bob.y
+	draw_rect(Rect2(Vector2(-7, leg_y), Vector2(leg_w, leg_h)), leg_color)
+	draw_rect(Rect2(Vector2(2, leg_y), Vector2(leg_w, leg_h)), leg_color)
+
+	# --- Body (torso — tapered rectangle) ---
+	var body_top := -BODY_SIZE.y / 2 + 8 + bob.y
+	var body_h := BODY_SIZE.y - 18
+	var body_points := PackedVector2Array([
+		Vector2(-10, body_top + body_h),
+		Vector2(-8, body_top),
+		Vector2(8, body_top),
+		Vector2(10, body_top + body_h),
+	])
+	draw_colored_polygon(body_points, _draw_color)
+
+	# --- Shoulder pauldrons ---
+	var pauldron_color := _draw_color.lightened(0.15)
+	draw_rect(Rect2(Vector2(-12, body_top - 1), Vector2(6, 6)), pauldron_color)
+	draw_rect(Rect2(Vector2(6, body_top - 1), Vector2(6, 6)), pauldron_color)
+
+	# --- Head (circle) ---
+	var head_center := Vector2(0, -BODY_SIZE.y / 2 + 4 + bob.y)
+	var head_radius := 7.0
+	draw_circle(head_center, head_radius, _draw_color.lightened(0.2))
+	# Helmet visor
+	var visor_y := head_center.y + 1
+	draw_rect(Rect2(Vector2(-5, visor_y), Vector2(10, 3)), _draw_color.darkened(0.4))
+
+	# --- Weapon (sword or spear — facing direction) ---
+	var weapon_color := Color(0.7, 0.7, 0.8)
+	var weapon_base := Vector2(8 * facing, body_top + 4 + bob.y)
+	var weapon_tip := weapon_base + Vector2(14 * facing, -8)
+	draw_line(weapon_base, weapon_tip, weapon_color, 2.0)
+	# Hilt
+	draw_line(weapon_base + Vector2(-2 * facing, 0), weapon_base + Vector2(2 * facing, 0), Color(0.5, 0.35, 0.2), 2.0)
+
+	# --- Shield buff overlay ---
+	if _shield_alpha > 0.01:
+		var shield_color := Color(0.3, 0.5, 1.0, _shield_alpha)
+		draw_arc(Vector2(0, bob.y), 16.0, 0, TAU, 24, shield_color, 2.0)
+
+	# --- Damage boost overlay ---
+	if _boost_alpha > 0.01:
+		var boost_color := Color(1.0, 0.5, 0.1, _boost_alpha)
+		draw_arc(Vector2(0, bob.y), 14.0, 0, TAU, 24, boost_color, 1.5)
+
+func draw_ellipse_custom(center: Vector2, radii: Vector2, color: Color) -> void:
+	var points := PackedVector2Array()
+	var segments := 16
+	for i in segments + 1:
+		var angle := float(i) / float(segments) * TAU
+		points.append(center + Vector2(cos(angle) * radii.x, sin(angle) * radii.y))
+	draw_colored_polygon(points, color)
 
 func change_state(new_state: State) -> void:
 	_state = new_state
@@ -108,7 +203,7 @@ func heal(amount: int) -> void:
 	hp = mini(max_hp, hp + amount)
 	_update_hp_bar()
 	# Green flash
-	_body_rect.color = Color(0.3, 1.0, 0.5)
+	_draw_color = Color(0.3, 1.0, 0.5)
 	_flash_timer = 0.3
 
 func get_damage() -> int:
@@ -160,10 +255,10 @@ func _play_death_anim() -> void:
 
 func _play_defend_anim() -> void:
 	# Brief blue tint
-	_body_rect.color = Color(0.3, 0.5, 1.0)
+	_draw_color = Color(0.3, 0.5, 1.0)
 	var tween := create_tween()
 	tween.tween_interval(0.3)
 	tween.tween_callback(func():
-		_body_rect.color = _original_color
+		_draw_color = _original_color
 		change_state(State.IDLE)
 	)

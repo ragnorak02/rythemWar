@@ -1,10 +1,11 @@
 extends Node2D
 ## CharacterSelect — pick army color variant per player before battle.
+## Graphics V1: shield-shaped army crests with faction emblems, shader BG.
 
 var _variants: Array[Dictionary] = []
 var _selected_index: int = 0
 var _p2_selected_index: int = 1
-var _preview_rects: Array[ColorRect] = []
+var _preview_containers: Array[Node2D] = []
 var _selecting_p2: bool = false
 
 func _ready() -> void:
@@ -15,14 +16,27 @@ func _ready() -> void:
 
 func _setup_variants() -> void:
 	_variants = [
-		{"name": "Azure Guard", "color": Color(0.25, 0.45, 0.85), "accent": Color(0.4, 0.7, 1.0)},
-		{"name": "Crimson Legion", "color": Color(0.85, 0.2, 0.2), "accent": Color(1.0, 0.4, 0.3)},
-		{"name": "Emerald Phalanx", "color": Color(0.15, 0.7, 0.3), "accent": Color(0.3, 1.0, 0.5)},
-		{"name": "Golden Horde", "color": Color(0.85, 0.7, 0.15), "accent": Color(1.0, 0.9, 0.3)},
-		{"name": "Shadow Vanguard", "color": Color(0.35, 0.25, 0.5), "accent": Color(0.6, 0.4, 0.9)},
+		{"name": "Azure Guard", "color": Color(0.25, 0.45, 0.85), "accent": Color(0.4, 0.7, 1.0), "emblem": "shield"},
+		{"name": "Crimson Legion", "color": Color(0.85, 0.2, 0.2), "accent": Color(1.0, 0.4, 0.3), "emblem": "sword"},
+		{"name": "Emerald Phalanx", "color": Color(0.15, 0.7, 0.3), "accent": Color(0.3, 1.0, 0.5), "emblem": "leaf"},
+		{"name": "Golden Horde", "color": Color(0.85, 0.7, 0.15), "accent": Color(1.0, 0.9, 0.3), "emblem": "crown"},
+		{"name": "Shadow Vanguard", "color": Color(0.35, 0.25, 0.5), "accent": Color(0.6, 0.4, 0.9), "emblem": "dagger"},
 	]
 
 func _build_ui() -> void:
+	# Background with shader
+	var bg := ColorRect.new()
+	bg.size = Vector2(1280, 720)
+	bg.z_index = -10
+	var bg_shader := load("res://assets/shaders/menu_bg.gdshader")
+	if bg_shader:
+		var mat := ShaderMaterial.new()
+		mat.shader = bg_shader
+		bg.material = mat
+	else:
+		bg.color = Color(0.05, 0.04, 0.09)
+	add_child(bg)
+
 	# Title
 	var title := Label.new()
 	title.text = "SELECT YOUR ARMY" if not GameManager.is_2p else "P1 — SELECT YOUR ARMY"
@@ -34,7 +48,7 @@ func _build_ui() -> void:
 	title.name = "Title"
 	add_child(title)
 
-	# Army preview squares
+	# Army crest previews
 	var start_x := 190.0
 	var sq_size := 120.0
 	var spacing := 50.0
@@ -45,20 +59,34 @@ func _build_ui() -> void:
 		var container := Node2D.new()
 		container.position = Vector2(start_x + i * (sq_size + spacing), 200)
 		add_child(container)
+		_preview_containers.append(container)
 
-		# Background
-		var bg := ColorRect.new()
-		bg.size = Vector2(sq_size, sq_size)
-		bg.color = Color(0.12, 0.1, 0.18)
-		container.add_child(bg)
+		# Background panel with border
+		var border := ColorRect.new()
+		border.size = Vector2(sq_size + 4, sq_size + 4)
+		border.position = Vector2(-2, -2)
+		border.color = variant["accent"].darkened(0.5)
+		border.z_index = -1
+		container.add_child(border)
 
-		# Army color preview
-		var preview := ColorRect.new()
-		preview.size = Vector2(sq_size - 20, sq_size - 20)
-		preview.position = Vector2(10, 10)
-		preview.color = variant["color"]
-		container.add_child(preview)
-		_preview_rects.append(preview)
+		var panel_bg := ColorRect.new()
+		panel_bg.size = Vector2(sq_size, sq_size)
+		panel_bg.color = Color(0.1, 0.08, 0.14)
+		container.add_child(panel_bg)
+
+		# Army color fill (inner area)
+		var fill := ColorRect.new()
+		fill.size = Vector2(sq_size - 16, sq_size - 16)
+		fill.position = Vector2(8, 8)
+		fill.color = variant["color"].darkened(0.2)
+		container.add_child(fill)
+
+		# Crest drawing node
+		var crest := _ArmyCrest.new()
+		crest.position = Vector2(sq_size / 2, sq_size / 2)
+		crest.crest_color = variant["accent"]
+		crest.emblem_type = variant["emblem"]
+		container.add_child(crest)
 
 		# Name
 		var name_label := Label.new()
@@ -127,16 +155,21 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _update_selection() -> void:
-	for i in _preview_rects.size():
+	for i in _preview_containers.size():
+		var container := _preview_containers[i]
+		var border: ColorRect = container.get_child(0)
 		if i == _selected_index:
-			_preview_rects[i].get_parent().scale = Vector2(1.1, 1.1)
-			_preview_rects[i].get_parent().modulate = Color.WHITE
+			container.scale = Vector2(1.1, 1.1)
+			container.modulate = Color.WHITE
+			border.color = _variants[i]["accent"]
 		elif GameManager.is_2p and _selecting_p2 and i == _p2_selected_index:
-			_preview_rects[i].get_parent().scale = Vector2(1.1, 1.1)
-			_preview_rects[i].get_parent().modulate = Color(0.8, 1.0, 0.8)
+			container.scale = Vector2(1.1, 1.1)
+			container.modulate = Color(0.8, 1.0, 0.8)
+			border.color = _variants[i]["accent"].lightened(0.2)
 		else:
-			_preview_rects[i].get_parent().scale = Vector2(0.9, 0.9)
-			_preview_rects[i].get_parent().modulate = Color(0.5, 0.5, 0.5)
+			container.scale = Vector2(0.9, 0.9)
+			container.modulate = Color(0.5, 0.5, 0.5)
+			border.color = _variants[i]["accent"].darkened(0.6)
 
 	# Update title for P2 selection
 	var title_node := get_node_or_null("Title")
@@ -163,3 +196,51 @@ func _confirm() -> void:
 		GameManager.selected_chart["p2_army_name"] = _variants[_p2_selected_index]["name"]
 
 	Events.scene_change_requested.emit("res://scenes/Battle.tscn")
+
+
+## Inner class for drawing army crest emblems
+class _ArmyCrest extends Node2D:
+	var crest_color: Color = Color.WHITE
+	var emblem_type: String = "shield"
+
+	func _draw() -> void:
+		match emblem_type:
+			"shield":
+				# Shield shape
+				var pts := PackedVector2Array([
+					Vector2(0, -20), Vector2(18, -12), Vector2(18, 8),
+					Vector2(0, 22), Vector2(-18, 8), Vector2(-18, -12)
+				])
+				draw_colored_polygon(pts, Color(crest_color.r, crest_color.g, crest_color.b, 0.5))
+				draw_polyline(pts + PackedVector2Array([pts[0]]), crest_color, 1.5)
+			"sword":
+				# Sword cross
+				draw_line(Vector2(0, -20), Vector2(0, 18), crest_color, 2.0)
+				draw_line(Vector2(-10, -6), Vector2(10, -6), crest_color, 2.0)
+				draw_line(Vector2(-3, 18), Vector2(3, 18), crest_color, 1.5)
+			"leaf":
+				# Leaf / nature
+				var pts := PackedVector2Array([
+					Vector2(0, -18), Vector2(12, -4), Vector2(8, 10),
+					Vector2(0, 18), Vector2(-8, 10), Vector2(-12, -4)
+				])
+				draw_colored_polygon(pts, Color(crest_color.r, crest_color.g, crest_color.b, 0.4))
+				draw_line(Vector2(0, -18), Vector2(0, 18), crest_color, 1.5)
+			"crown":
+				# Crown shape
+				var pts := PackedVector2Array([
+					Vector2(-14, 6), Vector2(-14, -4), Vector2(-8, -10),
+					Vector2(0, -4), Vector2(8, -10), Vector2(14, -4),
+					Vector2(14, 6)
+				])
+				draw_polyline(pts, crest_color, 2.0)
+				draw_line(Vector2(-14, 6), Vector2(14, 6), crest_color, 2.0)
+			"dagger":
+				# Dagger
+				draw_line(Vector2(0, -18), Vector2(0, 12), crest_color, 2.0)
+				draw_line(Vector2(-6, -4), Vector2(6, -4), crest_color, 2.0)
+				# Blade tip
+				var tip := PackedVector2Array([
+					Vector2(-3, 12), Vector2(0, 20), Vector2(3, 12)
+				])
+				draw_colored_polygon(tip, crest_color)

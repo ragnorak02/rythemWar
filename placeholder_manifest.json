@@ -1,0 +1,111 @@
+{
+  "pass": "graphics_v1",
+  "date": "2026-02-18",
+  "assets": [
+    {
+      "file": "scripts/battle/unit.gd",
+      "replaces": "ColorRect 24x36 in unit.gd:41-61",
+      "swap_target": "Soldier sprite sheet (idle, attack, hurt, death frames)",
+      "dimensions": "24x36",
+      "technique": "Programmatic (_draw)"
+    },
+    {
+      "file": "scripts/rhythm/note_arrow.gd",
+      "replaces": "ColorRect 40x40 in note_arrow.gd:32-49",
+      "swap_target": "Per-button note sprites (A/B/X/Y diamond shapes)",
+      "dimensions": "40x40",
+      "technique": "Programmatic (_draw)"
+    },
+    {
+      "file": "assets/shaders/judgment_line_glow.gdshader",
+      "replaces": "ColorRect 4x80 white semi-transparent in rhythm_lane.gd:60-64",
+      "swap_target": "Final judgment line VFX or sprite",
+      "dimensions": "12x90",
+      "technique": "Shader"
+    },
+    {
+      "file": "assets/shaders/rhythm_lane.gdshader",
+      "replaces": "ColorRect 800x60 flat dark in rhythm_lane.gd:67-72",
+      "swap_target": "Final rhythm lane background art",
+      "dimensions": "800x60",
+      "technique": "Shader"
+    },
+    {
+      "file": "assets/shaders/battle_bg.gdshader",
+      "replaces": "Flat clear color in battle.gd:15",
+      "swap_target": "Final battle scene background art",
+      "dimensions": "1280x720",
+      "technique": "Shader"
+    },
+    {
+      "file": "assets/shaders/menu_bg.gdshader",
+      "replaces": "Flat clear color in main_menu.gd:11, stage_select.gd:10, etc.",
+      "swap_target": "Final menu background art",
+      "dimensions": "1280x720",
+      "technique": "Shader"
+    },
+    {
+      "file": "assets/shaders/selector_glow.gdshader",
+      "replaces": "ColorRect 300x40 gold 15% in main_menu.gd:50-53",
+      "swap_target": "Final menu selector highlight",
+      "dimensions": "300x40",
+      "technique": "Shader"
+    },
+    {
+      "file": "assets/shaders/separator_glow.gdshader",
+      "replaces": "ColorRect 880x2 gray in battle.gd:77-82",
+      "swap_target": "Final 2P separator visual",
+      "dimensions": "880x10",
+      "technique": "Shader"
+    },
+    {
+      "file": "scripts/ui/stage_select.gd",
+      "replaces": "Plain ColorRect 300x400 cards in stage_select.gd:80-94",
+      "swap_target": "Stage card art with difficulty-themed illustrations",
+      "dimensions": "300x400",
+      "technique": "Programmatic (styled borders, accent regions)"
+    },
+    {
+      "file": "scripts/ui/character_select.gd",
+      "replaces": "ColorRect 100x100 army preview in character_select.gd:50-61",
+      "swap_target": "Army faction crest/emblem art per variant",
+      "dimensions": "120x120",
+      "technique": "Programmatic (_draw inner class)"
+    },
+    {
+      "file": "scripts/ui/hud.gd",
+      "replaces": "Plain ColorRect HP bars in hud.gd:46-87",
+      "swap_target": "Final HUD bar art with team insignia",
+      "dimensions": "300x16",
+      "technique": "Programmatic (beveled frame)"
+    },
+    {
+      "file": "scripts/ui/results_screen.gd",
+      "replaces": "Plain ColorRect 420x350 panels in results_screen.gd:68-71",
+      "swap_target": "Final results panel art",
+      "dimensions": "420x350",
+      "technique": "Programmatic (bordered frame, accent bars)"
+    },
+    {
+      "file": "scripts/ui/achievement_popup.gd",
+      "replaces": "Plain ColorRect 350x70 in achievement_popup.gd:18-28",
+      "swap_target": "Final achievement popup art with real trophy icons",
+      "dimensions": "350x70",
+      "technique": "Programmatic (styled panel with icon slot)"
+    },
+    {
+      "file": "scripts/rhythm/rhythm_lane.gd (CPUParticles2D)",
+      "replaces": "No judgment feedback VFX existed",
+      "swap_target": "Final hit VFX (particle textures or animated sprites)",
+      "dimensions": "N/A",
+      "technique": "Particle (CPUParticles2D)"
+    },
+    {
+      "file": "scripts/ui/main_menu.gd (CPUParticles2D)",
+      "replaces": "No menu atmosphere existed",
+      "swap_target": "Final menu particle textures",
+      "dimensions": "N/A",
+      "technique": "Particle (CPUParticles2D)"
+    }
+  ]
+}

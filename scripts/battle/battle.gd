@@ -1,5 +1,6 @@
 extends Node2D
 ## Battle — scene root. Wires together armies, rhythm lane, state machine, and HUD.
+## Graphics V1: shader battle background, glow separator for 2P mode.
 
 var _player_army: Node2D = null
 var _enemy_army: Node2D = null
@@ -13,6 +14,7 @@ var _battle_active: bool = false
 
 func _ready() -> void:
 	RenderingServer.set_default_clear_color(Color(0.06, 0.05, 0.1))
+	_build_background()
 	_load_chart()
 	_setup_armies()
 	_setup_rhythm_lane()
@@ -22,6 +24,20 @@ func _ready() -> void:
 	_setup_achievement_popup()
 	_connect_signals()
 	_start_battle()
+
+func _build_background() -> void:
+	var bg := ColorRect.new()
+	bg.size = Vector2(1280, 720)
+	bg.position = Vector2.ZERO
+	bg.z_index = -10
+	var bg_shader := load("res://assets/shaders/battle_bg.gdshader")
+	if bg_shader:
+		var mat := ShaderMaterial.new()
+		mat.shader = bg_shader
+		bg.material = mat
+	else:
+		bg.color = Color(0.06, 0.05, 0.1)
+	add_child(bg)
 
 func _load_chart() -> void:
 	var stage_id: String = GameManager.selected_stage
@@ -74,11 +90,17 @@ func _setup_2p_layout() -> void:
 	_rhythm_lane.setup_lane(1)
 	_rhythm_lane.load_chart(_chart_data)
 
-	# Separator line
+	# Separator line with glow shader
 	var separator := ColorRect.new()
-	separator.size = Vector2(880, 2)
-	separator.position = Vector2(200, 520)
-	separator.color = Color(0.4, 0.4, 0.5, 0.5)
+	separator.size = Vector2(880, 10)
+	separator.position = Vector2(200, 516)
+	var sep_shader := load("res://assets/shaders/separator_glow.gdshader")
+	if sep_shader:
+		var mat := ShaderMaterial.new()
+		mat.shader = sep_shader
+		separator.material = mat
+	else:
+		separator.color = Color(0.4, 0.4, 0.5, 0.5)
 	add_child(separator)
 
 	# P2 lane — bottom half

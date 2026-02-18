@@ -40,3 +40,22 @@ A 2D rhythm battler that merges the precision of rhythm games with the tactical 
 - [x] Phase 6: 2P split-screen & results
 - [x] Phase 7: Achievements
 - [x] Phase 8: Save system & tests
+
+### Graphics Pass V1 — 2026-02-18
+- Replaced 17 primitive/placeholder visuals with improved assets
+- Units: custom _draw() soldier silhouettes with head, torso, legs, weapon, pauldrons, shadow
+- Note arrows: diamond shapes with glow, border outlines, defend shield indicator
+- Added animation cycles for: unit idle bob, attack lunge, hit flash, death fade, shield/boost overlays
+- Judgment line: shader glow with pulsing
+- Rhythm lane: shader with scrolling beat markers and edge glow
+- Battle background: shader with starfield, ground plane, horizon glow
+- Menu backgrounds: shader with vignette, stars, floating dust particles
+- Stage cards: styled with border glow, accent regions, separators
+- Army crests: custom _draw() faction emblems (shield, sword, leaf, crown, dagger)
+- HUD HP bars: beveled frames with highlight stripe
+- Results panels: bordered frames with accent bars, grade legend
+- Achievement popup: styled with icon slot, border frame
+- 2P separator: shader glow line with shimmer
+- Judgment feedback: CPUParticles2D burst on Perfect (gold) and Great (green)
+- Techniques used: Shader, Programmatic (_draw), Particle (CPUParticles2D)
+- Asset stage: placeholder_v1 (swap-ready for final art)

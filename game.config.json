@@ -23,5 +23,7 @@
     "keyboard_p1": "A/S/D/F (face buttons), W/X/Z/C (directions), Shift (modifier)",
     "keyboard_p2": "I/J/K/L (face buttons), Arrow keys (directions), Ctrl (modifier)",
     "controller": "A/B/X/Y (face), D-pad (directions), RT (modifier)"
-  }
+  },
+  "lastArtUpdate": "2026-02-18",
+  "asset_stage": "placeholder_v1"
 }

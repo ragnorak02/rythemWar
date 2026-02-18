@@ -1,6 +1,7 @@
 extends Node2D
 ## RhythmLane — per-player lane. Owns a NoteSpawner, handles _input(),
 ## tracks combo, displays judgment text. Supports direction combos and RT modifier.
+## Graphics V1: shader judgment line, shader lane BG, particle judgment feedback.
 
 const JUDGMENT_LINE_X := 150.0
 const LANE_HEIGHT := 60.0
@@ -21,6 +22,7 @@ var _judgment_label: Label = null
 var _combo_label: Label = null
 var _result_type_label: Label = null
 var _judgment_line: ColorRect = null
+var _judgment_particles: CPUParticles2D = null
 var _button_actions: Dictionary = {}
 var _direction_actions: Array[String] = []
 var _modifier_action: String = ""
@@ -56,20 +58,52 @@ func _setup_button_mapping() -> void:
 	_modifier_action = prefix + "modifier"
 
 func _build_visuals() -> void:
-	# Judgment line (vertical bar where notes should be hit)
-	_judgment_line = ColorRect.new()
-	_judgment_line.size = Vector2(4, LANE_HEIGHT + 20)
-	_judgment_line.position = Vector2(JUDGMENT_LINE_X - 2, -(LANE_HEIGHT / 2) - 10)
-	_judgment_line.color = Color(1.0, 1.0, 1.0, 0.6)
-	add_child(_judgment_line)
-
-	# Lane background
+	# Lane background with shader
 	var lane_bg := ColorRect.new()
 	lane_bg.size = Vector2(800, LANE_HEIGHT)
 	lane_bg.position = Vector2(0, -(LANE_HEIGHT / 2))
-	lane_bg.color = Color(0.1, 0.1, 0.15, 0.5)
-	add_child(lane_bg)
 	lane_bg.z_index = -1
+	var lane_shader := load("res://assets/shaders/rhythm_lane.gdshader")
+	if lane_shader:
+		var mat := ShaderMaterial.new()
+		mat.shader = lane_shader
+		lane_bg.material = mat
+	else:
+		lane_bg.color = Color(0.1, 0.1, 0.15, 0.5)
+	add_child(lane_bg)
+
+	# Judgment line with glow shader
+	_judgment_line = ColorRect.new()
+	_judgment_line.size = Vector2(12, LANE_HEIGHT + 30)
+	_judgment_line.position = Vector2(JUDGMENT_LINE_X - 6, -(LANE_HEIGHT / 2) - 15)
+	var line_shader := load("res://assets/shaders/judgment_line_glow.gdshader")
+	if line_shader:
+		var mat := ShaderMaterial.new()
+		mat.shader = line_shader
+		mat.set_shader_parameter("glow_color", Color(1.0, 0.95, 0.7, 0.9))
+		mat.set_shader_parameter("pulse_speed", 3.0)
+		_judgment_line.material = mat
+	else:
+		_judgment_line.color = Color(1.0, 1.0, 1.0, 0.6)
+	add_child(_judgment_line)
+
+	# Judgment feedback particles (burst on Perfect/Great)
+	_judgment_particles = CPUParticles2D.new()
+	_judgment_particles.position = Vector2(JUDGMENT_LINE_X, 0)
+	_judgment_particles.emitting = false
+	_judgment_particles.one_shot = true
+	_judgment_particles.amount = 12
+	_judgment_particles.lifetime = 0.5
+	_judgment_particles.explosiveness = 1.0
+	_judgment_particles.direction = Vector2(0, -1)
+	_judgment_particles.spread = 120.0
+	_judgment_particles.initial_velocity_min = 60.0
+	_judgment_particles.initial_velocity_max = 120.0
+	_judgment_particles.gravity = Vector2(0, 80)
+	_judgment_particles.scale_amount_min = 2.0
+	_judgment_particles.scale_amount_max = 4.0
+	_judgment_particles.color = Color(1.0, 0.84, 0.0)
+	add_child(_judgment_particles)
 
 	# Judgment text display
 	_judgment_label = Label.new()
@@ -197,13 +231,10 @@ func _on_button_pressed(button_name: String) -> void:
 	_show_result_type(result_type)
 	_update_combo_display()
 
+	# Particle burst for good hits
+	_emit_judgment_particles(grade)
+
 func _determine_result_type(note_type: String) -> String:
-	## Determine attack result based on modifier and direction held:
-	## - No modifier, no direction: "normal" attack/defend
-	## - Modifier held + attack note: "super_strike" (extra damage)
-	## - Modifier held + defend note: "super_counter" (counter-attack)
-	## - Direction held + attack: "directed_attack" (targets specific unit)
-	## - Direction held + defend: "block" (reduces incoming damage)
 	if _modifier_held:
 		if note_type == "attack":
 			return "super_strike"
@@ -275,6 +306,18 @@ func _update_combo_display() -> void:
 		_combo_label.modulate.a = 1.0
 	else:
 		_combo_label.text = ""
+
+func _emit_judgment_particles(grade: String) -> void:
+	if grade == Judgment.GRADE_PERFECT:
+		_judgment_particles.amount = 16
+		_judgment_particles.color = Color(1.0, 0.84, 0.0)  # Gold
+		_judgment_particles.restart()
+		_judgment_particles.emitting = true
+	elif grade == Judgment.GRADE_GREAT:
+		_judgment_particles.amount = 10
+		_judgment_particles.color = Color(0.0, 1.0, 0.4)  # Green
+		_judgment_particles.restart()
+		_judgment_particles.emitting = true
 
 func get_accuracy() -> float:
 	var total: int = total_hits + total_misses

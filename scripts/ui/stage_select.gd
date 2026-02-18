@@ -1,5 +1,6 @@
 extends Node2D
 ## StageSelect — Easy(yellow) / Medium(orange) / Hard(red) large cards with L/R navigation.
+## Graphics V1: styled cards with gradient fill, border glow, difficulty icons.
 
 var _stages: Array[Dictionary] = []
 var _selected_index: int = 0
@@ -22,6 +23,7 @@ func _setup_stages() -> void:
 			"notes": 20,
 			"color": Color(0.95, 0.85, 0.2),  # Yellow
 			"desc": "A gentle warm-up. Simple patterns at a comfortable tempo.",
+			"icon": "I",  # Sunrise
 		},
 		{
 			"id": "medium_01",
@@ -31,6 +33,7 @@ func _setup_stages() -> void:
 			"notes": 30,
 			"color": Color(1.0, 0.55, 0.1),  # Orange
 			"desc": "Faster tempo with mixed buttons and tighter spacing.",
+			"icon": "II",  # Swords
 		},
 		{
 			"id": "hard_01",
@@ -40,10 +43,24 @@ func _setup_stages() -> void:
 			"notes": 40,
 			"color": Color(1.0, 0.2, 0.2),  # Red
 			"desc": "Relentless patterns at blazing speed. For veterans only.",
+			"icon": "III",  # Skull
 		},
 	]
 
 func _build_ui() -> void:
+	# Background with shader
+	var bg := ColorRect.new()
+	bg.size = Vector2(1280, 720)
+	bg.z_index = -10
+	var bg_shader := load("res://assets/shaders/menu_bg.gdshader")
+	if bg_shader:
+		var mat := ShaderMaterial.new()
+		mat.shader = bg_shader
+		bg.material = mat
+	else:
+		bg.color = Color(0.05, 0.04, 0.09)
+	add_child(bg)
+
 	# Title
 	_title_label = Label.new()
 	_title_label.text = "SELECT STAGE"
@@ -81,10 +98,18 @@ func _build_card(stage: Dictionary, _index: int) -> Node2D:
 	var card := Node2D.new()
 	var color: Color = stage["color"]
 
+	# Card border (slightly larger, glowing)
+	var border := ColorRect.new()
+	border.size = Vector2(304, 404)
+	border.position = Vector2(-2, -2)
+	border.color = color.darkened(0.5)
+	border.z_index = -1
+	card.add_child(border)
+
 	# Card background
 	var bg := ColorRect.new()
 	bg.size = Vector2(300, 400)
-	bg.color = Color(0.12, 0.1, 0.18)
+	bg.color = Color(0.1, 0.08, 0.15)
 	card.add_child(bg)
 
 	# Color accent bar at top
@@ -93,20 +118,44 @@ func _build_card(stage: Dictionary, _index: int) -> Node2D:
 	accent.color = color
 	card.add_child(accent)
 
+	# Inner top gradient area (difficulty color region)
+	var top_area := ColorRect.new()
+	top_area.size = Vector2(300, 80)
+	top_area.position = Vector2(0, 8)
+	top_area.color = Color(color.r, color.g, color.b, 0.08)
+	card.add_child(top_area)
+
+	# Difficulty numeral (large centered)
+	var icon_label := Label.new()
+	icon_label.text = stage.get("icon", "")
+	icon_label.position = Vector2(0, 20)
+	icon_label.size = Vector2(300, 50)
+	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	icon_label.add_theme_font_size_override("font_size", 28)
+	icon_label.add_theme_color_override("font_color", Color(color.r, color.g, color.b, 0.4))
+	card.add_child(icon_label)
+
 	# Difficulty label
 	var diff_label := Label.new()
 	diff_label.text = stage["difficulty"]
-	diff_label.position = Vector2(0, 30)
+	diff_label.position = Vector2(0, 95)
 	diff_label.size = Vector2(300, 50)
 	diff_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	diff_label.add_theme_font_size_override("font_size", 36)
 	diff_label.add_theme_color_override("font_color", color)
 	card.add_child(diff_label)
 
+	# Separator line
+	var sep := ColorRect.new()
+	sep.size = Vector2(240, 1)
+	sep.position = Vector2(30, 145)
+	sep.color = Color(color.r, color.g, color.b, 0.3)
+	card.add_child(sep)
+
 	# Title
 	var title_label := Label.new()
 	title_label.text = stage["title"]
-	title_label.position = Vector2(0, 90)
+	title_label.position = Vector2(0, 155)
 	title_label.size = Vector2(300, 30)
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.add_theme_font_size_override("font_size", 20)
@@ -116,7 +165,7 @@ func _build_card(stage: Dictionary, _index: int) -> Node2D:
 	# BPM
 	var bpm_label := Label.new()
 	bpm_label.text = "%d BPM" % stage["bpm"]
-	bpm_label.position = Vector2(0, 140)
+	bpm_label.position = Vector2(0, 190)
 	bpm_label.size = Vector2(300, 25)
 	bpm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	bpm_label.add_theme_font_size_override("font_size", 16)
@@ -126,7 +175,7 @@ func _build_card(stage: Dictionary, _index: int) -> Node2D:
 	# Notes count
 	var notes_label := Label.new()
 	notes_label.text = "%d Notes" % stage["notes"]
-	notes_label.position = Vector2(0, 165)
+	notes_label.position = Vector2(0, 215)
 	notes_label.size = Vector2(300, 25)
 	notes_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	notes_label.add_theme_font_size_override("font_size", 14)
@@ -136,7 +185,7 @@ func _build_card(stage: Dictionary, _index: int) -> Node2D:
 	# Description
 	var desc_label := Label.new()
 	desc_label.text = stage["desc"]
-	desc_label.position = Vector2(20, 210)
+	desc_label.position = Vector2(20, 250)
 	desc_label.size = Vector2(260, 80)
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc_label.add_theme_font_size_override("font_size", 14)
@@ -187,12 +236,18 @@ func _input(event: InputEvent) -> void:
 func _update_selection() -> void:
 	for i in _cards.size():
 		var card := _cards[i]
+		var color: Color = _stages[i]["color"]
 		if i == _selected_index:
 			card.scale = Vector2(1.05, 1.05)
 			card.modulate = Color.WHITE
+			# Update border to glow
+			var border: ColorRect = card.get_child(0)
+			border.color = Color(color.r, color.g, color.b, 0.6)
 		else:
 			card.scale = Vector2(0.95, 0.95)
 			card.modulate = Color(0.5, 0.5, 0.5)
+			var border: ColorRect = card.get_child(0)
+			border.color = color.darkened(0.7)
 
 func _confirm_selection() -> void:
 	GameManager.selected_stage = _stages[_selected_index]["id"]

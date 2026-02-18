@@ -1,6 +1,6 @@
 extends Node
 ## HUD — in-battle heads-up display.
-## Shows player name/score/combo, army HP bars, turn info, ability cooldowns.
+## Graphics V1: styled HP bars with beveled frames, team icons.
 
 var _player_army: Node2D = null
 var _enemy_army: Node2D = null
@@ -42,19 +42,10 @@ func _build_ui() -> void:
 	_player_name_label.add_theme_color_override("font_color", Color(0.3, 0.6, 1.0))
 	add_child(_player_name_label)
 
-	# Player army HP bar
-	_player_hp_bar_bg = ColorRect.new()
-	_player_hp_bar_bg.size = Vector2(HP_BAR_WIDTH, HP_BAR_HEIGHT)
-	_player_hp_bar_bg.position = Vector2(20, 38)
-	_player_hp_bar_bg.color = Color(0.15, 0.15, 0.2)
-	add_child(_player_hp_bar_bg)
+	# Player HP bar — styled with border frame
+	_build_hp_bar(Vector2(20, 38), Color(0.2, 0.7, 1.0), true)
 
-	_player_hp_bar_fill = ColorRect.new()
-	_player_hp_bar_fill.size = Vector2(HP_BAR_WIDTH, HP_BAR_HEIGHT)
-	_player_hp_bar_fill.position = Vector2(20, 38)
-	_player_hp_bar_fill.color = Color(0.2, 0.7, 1.0)
-	add_child(_player_hp_bar_fill)
-
+	# Player HP text
 	_player_hp_label = Label.new()
 	_player_hp_label.text = "600 / 600"
 	_player_hp_label.position = Vector2(25, 38)
@@ -74,18 +65,10 @@ func _build_ui() -> void:
 	enemy_name.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
 	add_child(enemy_name)
 
-	_enemy_hp_bar_bg = ColorRect.new()
-	_enemy_hp_bar_bg.size = Vector2(HP_BAR_WIDTH, HP_BAR_HEIGHT)
-	_enemy_hp_bar_bg.position = Vector2(enemy_x, 38)
-	_enemy_hp_bar_bg.color = Color(0.15, 0.15, 0.2)
-	add_child(_enemy_hp_bar_bg)
+	# Enemy HP bar — styled with border frame
+	_build_hp_bar(Vector2(enemy_x, 38), Color(1.0, 0.3, 0.3), false)
 
-	_enemy_hp_bar_fill = ColorRect.new()
-	_enemy_hp_bar_fill.size = Vector2(HP_BAR_WIDTH, HP_BAR_HEIGHT)
-	_enemy_hp_bar_fill.position = Vector2(enemy_x, 38)
-	_enemy_hp_bar_fill.color = Color(1.0, 0.3, 0.3)
-	add_child(_enemy_hp_bar_fill)
-
+	# Enemy HP text
 	_enemy_hp_label = Label.new()
 	_enemy_hp_label.text = "600 / 600"
 	_enemy_hp_label.position = Vector2(enemy_x + 5, 38)
@@ -123,9 +106,60 @@ func _build_ui() -> void:
 	# --- Ability bar (bottom-left) ---
 	_build_ability_bar()
 
+func _build_hp_bar(pos: Vector2, fill_color: Color, is_player: bool) -> void:
+	# Outer border frame
+	var frame := ColorRect.new()
+	frame.size = Vector2(HP_BAR_WIDTH + 4, HP_BAR_HEIGHT + 4)
+	frame.position = pos - Vector2(2, 2)
+	frame.color = Color(0.35, 0.35, 0.45, 0.7)
+	add_child(frame)
+
+	# Inner border (dark inset)
+	var inset := ColorRect.new()
+	inset.size = Vector2(HP_BAR_WIDTH + 2, HP_BAR_HEIGHT + 2)
+	inset.position = pos - Vector2(1, 1)
+	inset.color = Color(0.08, 0.08, 0.12)
+	add_child(inset)
+
+	# Background
+	var bg := ColorRect.new()
+	bg.size = Vector2(HP_BAR_WIDTH, HP_BAR_HEIGHT)
+	bg.position = pos
+	bg.color = Color(0.12, 0.12, 0.18)
+	add_child(bg)
+
+	# Fill
+	var fill := ColorRect.new()
+	fill.size = Vector2(HP_BAR_WIDTH, HP_BAR_HEIGHT)
+	fill.position = pos
+	fill.color = fill_color
+	add_child(fill)
+
+	# Highlight stripe (top of bar for bevel effect)
+	var highlight := ColorRect.new()
+	highlight.size = Vector2(HP_BAR_WIDTH, 3)
+	highlight.position = pos
+	highlight.color = Color(1.0, 1.0, 1.0, 0.1)
+	add_child(highlight)
+
+	if is_player:
+		_player_hp_bar_bg = bg
+		_player_hp_bar_fill = fill
+	else:
+		_enemy_hp_bar_bg = bg
+		_enemy_hp_bar_fill = fill
+
 func _build_ability_bar() -> void:
 	if not _ability_system:
 		return
+
+	# Ability bar background
+	var bar_bg := ColorRect.new()
+	bar_bg.size = Vector2(660, 28)
+	bar_bg.position = Vector2(10, 676)
+	bar_bg.color = Color(0.06, 0.05, 0.1, 0.7)
+	add_child(bar_bg)
+
 	var abilities: Array = _ability_system.get_abilities()
 	for i in abilities.size():
 		var ability: Dictionary = abilities[i]
