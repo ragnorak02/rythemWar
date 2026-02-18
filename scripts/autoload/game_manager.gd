@@ -23,6 +23,9 @@ var settings: Dictionary = {
 # Last battle results (for results screen)
 var last_results: Dictionary = {}
 
+# Tactician config (set by tactician mode, read by battle)
+var tactician_config: Dictionary = {}
+
 func _ready() -> void:
 	Events.scene_change_requested.connect(_on_scene_change_requested)
 

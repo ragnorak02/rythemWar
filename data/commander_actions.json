@@ -1,0 +1,51 @@
+{
+  "actions": [
+    {
+      "id": "speed_boost",
+      "name": "+Speed",
+      "description": "Increase army speed — reduces enemy attacks per turn by 1.",
+      "effect_type": "reduce_enemy_attacks",
+      "value": 1,
+      "uses_per_battle": 1,
+      "color": "#33ccff"
+    },
+    {
+      "id": "power_boost",
+      "name": "+Power",
+      "description": "Empower your army with 2x damage for 3 turns.",
+      "effect_type": "damage_boost",
+      "value": 3,
+      "uses_per_battle": 1,
+      "color": "#ff6600"
+    },
+    {
+      "id": "defense_boost",
+      "name": "+Defense",
+      "description": "Harden your army with half incoming damage for 3 turns.",
+      "effect_type": "shield",
+      "value": 3,
+      "uses_per_battle": 1,
+      "color": "#3388ff"
+    },
+    {
+      "id": "sleep_frontline",
+      "name": "Sleep Frontline",
+      "description": "Attempt to put the enemy frontline to sleep, skipping their first attack.",
+      "effect_type": "skip_enemy_first",
+      "value": 1,
+      "success_chance": 0.6,
+      "uses_per_battle": 1,
+      "color": "#aa66ff"
+    },
+    {
+      "id": "reinforcement",
+      "name": "Reinforcement",
+      "description": "Call in a temporary reinforcement unit to bolster your army.",
+      "effect_type": "add_temp_unit",
+      "value": 1,
+      "success_chance": 0.5,
+      "uses_per_battle": 1,
+      "color": "#66ff66"
+    }
+  ]
+}

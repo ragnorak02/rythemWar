@@ -32,6 +32,20 @@ signal menu_confirmed(index: int)
 signal achievement_unlocked(achievement_id: String, title: String)
 signal achievement_progress(achievement_id: String, current: int, target: int)
 
+# --- Tactician Mode ---
+signal tactician_confirmed(player_id: int, config: Dictionary)
+signal tactician_fled(player_id: int)
+signal commander_action_used(player_id: int, action_id: String)
+
+# --- Engagements ---
+signal engagement_activated(index: int, player_units: Array, enemy_units: Array)
+signal engagement_resolved(index: int)
+
+# --- Telegraph ---
+signal telegraph_show(unit: Node2D, button_name: String, time_until: float)
+signal telegraph_hide(unit: Node2D)
+signal telegraph_feedback(unit: Node2D, grade: String)
+
 # --- Game State ---
 signal game_paused()
 signal game_resumed()

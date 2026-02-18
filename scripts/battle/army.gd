@@ -90,6 +90,41 @@ func tick_all_buffs() -> void:
 		if unit.is_alive:
 			unit.tick_buffs()
 
+func get_units_for_formation(formation: String) -> Array:
+	## Returns array of unit-group arrays based on formation type.
+	var alive := get_alive_units()
+	var groups: Array = []
+	match formation:
+		"solo":
+			for unit in alive:
+				groups.append([unit])
+		"pair", "squad":
+			var i := 0
+			while i < alive.size() - 1:
+				groups.append([alive[i], alive[i + 1]])
+				i += 2
+			if i < alive.size() and groups.size() > 0:
+				groups[groups.size() - 1].append(alive[i])
+			elif i < alive.size():
+				groups.append([alive[i]])
+		"legion":
+			# Falls back to squad for now
+			return get_units_for_formation("squad")
+		_:
+			for unit in alive:
+				groups.append([unit])
+	return groups
+
+func reposition_unit(unit: Node2D, target_pos: Vector2, animate: bool = true) -> void:
+	## Move a unit to a target local position, optionally with tween animation.
+	if not is_instance_valid(unit):
+		return
+	if animate:
+		var tween := unit.create_tween()
+		tween.tween_property(unit, "position", target_pos, 0.8).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	else:
+		unit.position = target_pos
+
 func _on_unit_died() -> void:
 	alive_count -= 1
 	if alive_count <= 0:

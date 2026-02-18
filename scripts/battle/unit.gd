@@ -15,6 +15,9 @@ var hp: int = 100
 var base_damage: int = 15
 var defense: int = 5
 var is_alive: bool = true
+var engagement_index: int = -1  # Which engagement cluster this unit belongs to
+
+var _telegraph: Node2D = null
 
 var _state: State = State.IDLE
 var _flash_timer: float = 0.0
@@ -262,3 +265,23 @@ func _play_defend_anim() -> void:
 		_draw_color = _original_color
 		change_state(State.IDLE)
 	)
+
+# --- Telegraph methods ---
+
+func attach_telegraph(telegraph_node: Node2D) -> void:
+	## Adds telegraph as child, positioned above HP bar.
+	_telegraph = telegraph_node
+	add_child(_telegraph)
+	_telegraph.position = Vector2(0, -BODY_SIZE.y / 2 - 30)
+
+func show_telegraph_button(button_name: String, time_until: float) -> void:
+	if _telegraph:
+		_telegraph.show_button(button_name, time_until)
+
+func hide_telegraph() -> void:
+	if _telegraph:
+		_telegraph.hide_button()
+
+func show_telegraph_feedback(grade: String) -> void:
+	if _telegraph:
+		_telegraph.show_feedback(grade)

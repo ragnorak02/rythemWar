@@ -7,6 +7,7 @@ const HIT_X := 150.0         # X position of the judgment line (target)
 const SPAWN_X := 900.0       # X position where notes spawn (right side)
 const DESPAWN_X := -100.0    # X position where missed notes are removed
 const NOTE_SIZE := 20.0      # Half-size of the diamond
+const REVEAL_DISTANCE := 300.0  # Distance from judgment line where "?" becomes actual button
 
 var note_time: float = 0.0   # target time in song seconds
 var button: String = ""       # "face_a", "face_b", "face_x", "face_y"
@@ -56,6 +57,13 @@ func _process(_delta: float) -> void:
 
 	# Glow phase for shimmer
 	_glow_phase += _delta * 4.0
+
+	# "?" reveal — show "?" when far from judgment line, actual button when close
+	var dist_from_judgment := absf(position.x - HIT_X)
+	if dist_from_judgment > REVEAL_DISTANCE:
+		_label.text = "?"
+	else:
+		_label.text = _get_button_label()
 
 	queue_redraw()
 
