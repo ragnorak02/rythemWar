@@ -30,6 +30,8 @@ A 2D rhythm battler that merges the precision of rhythm games with the tactical 
 - Online multiplayer
 - Campaign mode with progression
 - Rhythm editor for custom charts
+- Expanded formation effects (legion unique behavior)
+- More commander actions with deeper strategic variety
 
 ## Phases
 - [x] Phase 1: Core rhythm prototype (arrows, judgment, combo)
@@ -40,6 +42,7 @@ A 2D rhythm battler that merges the precision of rhythm games with the tactical 
 - [x] Phase 6: 2P split-screen & results
 - [x] Phase 7: Achievements
 - [x] Phase 8: Save system & tests
+- [x] Phase 9: Tactician Mode + Micro-Engagement Battlefield + Telegraph
 
 ### Graphics Pass V1 — 2026-02-18
 - Replaced 17 primitive/placeholder visuals with improved assets
@@ -59,3 +62,17 @@ A 2D rhythm battler that merges the precision of rhythm games with the tactical 
 - Judgment feedback: CPUParticles2D burst on Perfect (gold) and Great (green)
 - Techniques used: Shader, Programmatic (_draw), Particle (CPUParticles2D)
 - Asset stage: placeholder_v1 (swap-ready for final art)
+
+### Tactician Mode + Micro-Engagement Battlefield — 2026-02-18
+- Added pre-battle Tactician Mode panel with formation, aggression, commander actions, view/edit army, flee
+- Implemented micro-engagement battlefield: units scatter into solo/pair/squad clusters
+- Round-robin engagement cycling: each note targets a different cluster in rotation
+- On-unit telegraph system: button icons appear above active units with glow intensity
+- Note "?" reveal mechanic: distant notes show "?" until within 300px of judgment line
+- 5 commander actions: +Speed, +Power, +Defense, Sleep Frontline, Reinforcement
+- Aggression mode: +20% damage / -15% defense tradeoff
+- Flee mechanic: 40% RNG chance, penalty on failure
+- 2P split support: independent tactician panels, both must confirm
+- Battle state machine expanded: TACTICIAN → INTRO → PLAYER_TURN → ENEMY_TURN → CHECK_WIN
+- New files: tactician_mode, view_army_modal, edit_army_panel, commander_actions_panel, engagement_manager, unit_telegraph, commander_actions.json
+- Modified: events.gd (+8 signals), battle.gd (two-phase ready), battle_state_machine.gd (engagement targeting), army.gd (formation grouping), unit.gd (telegraph + engagement_index), note_arrow.gd (? reveal)

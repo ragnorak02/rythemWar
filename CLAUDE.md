@@ -18,13 +18,16 @@ A 2D side-view rhythm battler where two armies clash and the player inputs rhyth
 ### Key Directories
 ```
 scripts/autoload/    — 6 singleton autoloads
-scripts/rhythm/      — note_arrow, note_spawner, rhythm_lane, judgment
-scripts/battle/      — unit, army, battle, battle_state_machine, ability_system
+scripts/rhythm/      — note_arrow, note_spawner, rhythm_lane, judgment, unit_telegraph
+scripts/battle/      — unit, army, battle, battle_state_machine, ability_system,
+                       tactician_mode, engagement_manager, commander_actions_panel,
+                       view_army_modal, edit_army_panel
 scripts/ui/          — main_menu, stage_select, character_select, hud, results_screen, achievement_popup
 scripts/tests/       — test_suite
 scenes/              — .tscn files (minimal — all UI is programmatic)
 data/charts/         — stage JSON files (easy_01, medium_01, hard_01)
 data/abilities/      — abilities.json
+data/                — commander_actions.json (pre-battle commander action definitions)
 ```
 
 ### Rhythm System
@@ -35,11 +38,17 @@ data/abilities/      — abilities.json
 - **Charts** are JSON with `{ time, button, type }` note arrays
 
 ### Battle System
-- 2 armies of 6 units each in stagger formation
+- **Tactician Mode**: Pre-battle preparation screen with formation selection (solo/pair/squad/legion), aggression setting (normal/high), army view/edit, commander actions, and flee option
+- **Micro-Engagement Battlefield**: Units scatter from army columns into 1v1 or 2v2 engagement clusters based on formation choice. Round-robin cycling targets a different engagement per note.
+- **Engagement Manager** (`engagement_manager.gd`): Creates clusters, manages round-robin targeting, draws highlight borders (magenta=active, green=multi-unit)
+- **Commander Actions** (`data/commander_actions.json`): 5 pre-battle actions (+Speed, +Power, +Defense, Sleep Frontline, Reinforcement) with limited uses and RNG success chances
+- 2 armies of 6 units each; formation determines clustering
 - Rhythm hits resolve as attacks; misses let enemy counter-attack
 - Direction combos + RT modifier for Super Strike / Super Counter / Block / Directed Attack
 - 4 special abilities (Team Heal, Iron Skin, Tiger Fury, Auto-Block) with cooldown tracking
-- State machine: INTRO → PLAYER_TURN → ENEMY_TURN → CHECK_WIN → loop
+- State machine: TACTICIAN → INTRO → PLAYER_TURN → ENEMY_TURN → CHECK_WIN → loop
+- **On-Unit Telegraph** (`unit_telegraph.gd`): Button icon shown above active engagement unit with glow that intensifies as note approaches; feedback text on hit/miss
+- **Note "?" Reveal**: Notes show "?" until within 300px of judgment line, then reveal actual button letter
 
 ### Input Mapping
 | Action | P1 Keyboard | P2 Keyboard | Controller |
@@ -52,16 +61,29 @@ data/abilities/      — abilities.json
 | modifier | Shift | Ctrl | RT |
 
 ### Scene Flow
-`MainMenu → StageSelect → CharacterSelect → Battle → Results → MainMenu`
+`MainMenu → StageSelect → CharacterSelect → Battle (Tactician → Engage) → Results → MainMenu`
 
 ### Signal Flow (Core Loop)
 ```
 Player presses D → rhythm_lane._input() → _on_button_pressed("face_a")
   → NoteSpawner.get_hittable_note() → Judgment.evaluate() → Grade
   → Events.judgment_made → battle_state_machine resolves attack
+    → engagement_manager.get_active_player/enemy_unit() → targeting
     → unit.take_damage() → Events.unit_damaged/died
+    → engagement_manager.advance_engagement() → round-robin cycle
+    → unit.show_telegraph_feedback(grade) → on-unit feedback
     → achievement_manager tracks → Events.achievement_unlocked
     → hud updates score/combo
+```
+
+### Tactician Mode Flow
+```
+Battle._ready() → Phase A (bg, chart, armies, hud shell) → _setup_tactician_mode()
+  → Player navigates panel (Up/Down rows, Left/Right radio, A/Enter confirm)
+  → tactician_mode.confirmed signal → battle._on_tactician_confirmed()
+  → Phase B: close panel → apply aggression → setup engagement_manager
+    → redistribute_units() (tween animation) → setup rhythm_lane
+    → setup telegraph → setup state_machine → start_battle()
 ```
 
 ## Conventions
