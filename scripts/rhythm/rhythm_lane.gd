@@ -226,6 +226,13 @@ func _on_button_pressed(button_name: String) -> void:
 	Events.judgment_made.emit(player_id, grade, combo, note.note_type)
 	Events.note_hit.emit(player_id, note.note_type, grade)
 
+	# Play judgment SFX
+	match grade:
+		Judgment.GRADE_PERFECT: SfxManager.play("judgment_perfect")
+		Judgment.GRADE_GREAT: SfxManager.play("judgment_great")
+		Judgment.GRADE_GOOD: SfxManager.play("judgment_good")
+		Judgment.GRADE_BAD: SfxManager.play("judgment_bad")
+
 	# Show feedback
 	_show_judgment(grade)
 	_show_result_type(result_type)
@@ -258,6 +265,7 @@ func _get_result_type_bonus(result_type: String) -> float:
 func _on_note_missed(missed_player_id: int, _note_type: String) -> void:
 	if missed_player_id != player_id:
 		return
+	SfxManager.play("attack_miss")
 	total_misses += 1
 	if combo > 0:
 		Events.combo_broken.emit(player_id, combo)

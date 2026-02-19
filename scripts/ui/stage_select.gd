@@ -221,15 +221,19 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_menu_right") or event.is_action_pressed("p1_right"):
 		_selected_index = mini(_selected_index + 1, _stages.size() - 1)
 		_update_selection()
+		SfxManager.play("ui_navigate")
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_menu_left") or event.is_action_pressed("p1_left"):
 		_selected_index = maxi(_selected_index - 1, 0)
 		_update_selection()
+		SfxManager.play("ui_navigate")
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_menu_confirm") or event.is_action_pressed("p1_face_a"):
+		SfxManager.play("ui_confirm")
 		_confirm_selection()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_menu_back") or event.is_action_pressed("p1_face_b"):
+		SfxManager.play("ui_back")
 		Events.scene_change_requested.emit("res://scenes/MainMenu.tscn")
 		get_viewport().set_input_as_handled()
 

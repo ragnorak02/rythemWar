@@ -135,6 +135,7 @@ func _input(event: InputEvent) -> void:
 		else:
 			_p2_selected_index = mini(_p2_selected_index + 1, _variants.size() - 1)
 		_update_selection()
+		SfxManager.play("ui_navigate")
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_menu_left") or event.is_action_pressed("p1_left"):
 		if not _selecting_p2:
@@ -142,11 +143,14 @@ func _input(event: InputEvent) -> void:
 		else:
 			_p2_selected_index = maxi(_p2_selected_index - 1, 0)
 		_update_selection()
+		SfxManager.play("ui_navigate")
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_menu_confirm") or event.is_action_pressed("p1_face_a"):
+		SfxManager.play("ui_confirm")
 		_confirm()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_menu_back") or event.is_action_pressed("p1_face_b"):
+		SfxManager.play("ui_back")
 		if _selecting_p2:
 			_selecting_p2 = false
 			_update_selection()

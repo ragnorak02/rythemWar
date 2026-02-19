@@ -149,12 +149,14 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed(prefix + "up") or (event is InputEventKey and event.pressed and event.keycode == KEY_UP and player_id == 1):
 		_selected_index = maxi(0, _selected_index - 1)
 		_update_highlights()
+		SfxManager.play("ui_navigate")
 		get_viewport().set_input_as_handled()
 		return
 
 	if event.is_action_pressed(prefix + "down") or (event is InputEventKey and event.pressed and event.keycode == KEY_DOWN and player_id == 1):
 		_selected_index = mini(_actions.size() - 1, _selected_index + 1)
 		_update_highlights()
+		SfxManager.play("ui_navigate")
 		get_viewport().set_input_as_handled()
 		return
 
@@ -166,6 +168,7 @@ func _input(event: InputEvent) -> void:
 
 	# Close
 	if (event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE) or event.is_action_pressed(prefix + "face_b"):
+		SfxManager.play("ui_back")
 		_is_active = false
 		closed.emit(_actions_used)
 		get_viewport().set_input_as_handled()
@@ -176,6 +179,7 @@ func _use_action(index: int) -> void:
 
 	var action: Dictionary = _actions[index]
 	if action["id"] in _actions_used:
+		SfxManager.play("judgment_bad")
 		_feedback_label.text = "%s already used!" % action["name"]
 		return
 
@@ -184,6 +188,7 @@ func _use_action(index: int) -> void:
 	if chance < 1.0:
 		var roll := randf()
 		if roll >= chance:
+			SfxManager.play("judgment_bad")
 			_feedback_label.text = "%s FAILED! (needed < %d%%)" % [action["name"], int(chance * 100)]
 			_actions_used.append(action["id"])
 			_update_status(index, false)
@@ -191,6 +196,7 @@ func _use_action(index: int) -> void:
 			return
 
 	# Success
+	SfxManager.play("ui_confirm")
 	_actions_used.append(action["id"])
 	_feedback_label.text = "%s activated!" % action["name"]
 	_feedback_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.5))

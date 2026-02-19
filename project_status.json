@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "gameId": "rythemwar",
+  "title": "RhythmWar",
+  "lastUpdated": "2026-02-18T00:00:00Z",
+  "health": {
+    "progressPercent": 70,
+    "buildVersion": "0.4.0",
+    "assetStage": "wip"
+  },
+  "tech": {
+    "engine": "Godot",
+    "engineVersion": "4.6",
+    "languages": ["GDScript"],
+    "graphicsType": "2D"
+  },
+  "features": {
+    "controllerSupport": "complete",
+    "achievementsSystem": "complete",
+    "testScripts": "partial",
+    "saveSystem": "complete",
+    "settingsMenu": "missing",
+    "audio": "partial",
+    "vfx": "partial"
+  },
+  "milestones": {
+    "firstGraphicsPass": true,
+    "controllerIntegration": true,
+    "coreGameplayLoop": true,
+    "verticalSlice": false,
+    "contentComplete": false,
+    "productionReady": false
+  },
+  "testing": {
+    "testCommand": "tests/run-tests.bat",
+    "lastRunAt": null,
+    "status": "unknown",
+    "notes": "Partial test coverage"
+  },
+  "links": {
+    "repo": null,
+    "launcherId": "rythemwar"
+  }
+}

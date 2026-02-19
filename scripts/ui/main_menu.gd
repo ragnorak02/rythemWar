@@ -161,6 +161,7 @@ func _move_selection(direction: int) -> void:
 			break
 	_selected_index = new_index
 	_update_selection()
+	SfxManager.play("ui_navigate")
 	Events.menu_selection_changed.emit(_selected_index)
 
 func _update_selection() -> void:
@@ -175,6 +176,7 @@ func _update_selection() -> void:
 func _confirm_selection() -> void:
 	if not _menu_items[_selected_index]["enabled"]:
 		return
+	SfxManager.play("ui_confirm")
 
 	var action: String = _menu_items[_selected_index]["action"]
 	match action:

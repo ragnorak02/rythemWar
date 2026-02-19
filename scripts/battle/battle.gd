@@ -378,6 +378,10 @@ func _on_battle_ended(winner: String) -> void:
 	_battle_active = false
 	_telegraph_coordinator_active = false
 	Conductor.stop_song()
+	if winner == "player":
+		SfxManager.play("battle_victory")
+	else:
+		SfxManager.play("battle_defeat")
 
 	# Store results
 	var results: Dictionary = _rhythm_lane.get_results()

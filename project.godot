@@ -18,6 +18,7 @@ GameManager="*res://scripts/autoload/game_manager.gd"
 InputSetup="*res://scripts/autoload/input_setup.gd"
 SaveManager="*res://scripts/autoload/save_manager.gd"
 AchievementManager="*res://scripts/autoload/achievement_manager.gd"
+SfxManager="*res://scripts/autoload/sfx_manager.gd"
 
 [display]
 

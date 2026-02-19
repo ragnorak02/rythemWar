@@ -252,12 +252,15 @@ func _rank_color(rank: String) -> Color:
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_menu_confirm") or event.is_action_pressed("p1_face_a"):
+		SfxManager.play("ui_confirm")
 		Events.scene_change_requested.emit("res://scenes/MainMenu.tscn")
 		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_R:
+		SfxManager.play("ui_confirm")
 		# Replay same stage
 		Events.scene_change_requested.emit("res://scenes/Battle.tscn")
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_menu_back") or event.is_action_pressed("p1_face_b"):
+		SfxManager.play("ui_back")
 		Events.scene_change_requested.emit("res://scenes/MainMenu.tscn")
 		get_viewport().set_input_as_handled()

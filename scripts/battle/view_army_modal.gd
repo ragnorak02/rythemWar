@@ -160,6 +160,7 @@ func _input(event: InputEvent) -> void:
 
 	# Close on Escape or face_b
 	if (event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE) or event.is_action_pressed(prefix + "face_b"):
+		SfxManager.play("ui_back")
 		_is_active = false
 		closed.emit()
 		get_viewport().set_input_as_handled()

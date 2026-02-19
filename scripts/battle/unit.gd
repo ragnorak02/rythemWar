@@ -194,6 +194,7 @@ func take_damage(amount: int) -> int:
 
 	if hp <= 0:
 		is_alive = false
+		SfxManager.play("unit_death")
 		change_state(State.DEAD)
 		unit_died.emit()
 		Events.unit_died.emit(army_side, unit_index)

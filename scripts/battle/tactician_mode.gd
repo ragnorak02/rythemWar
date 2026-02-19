@@ -226,12 +226,14 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed(prefix + "up") or (event is InputEventKey and event.pressed and event.keycode == KEY_UP and player_id == 1):
 		_selected_row = maxi(0, _selected_row - 1)
 		_update_selection_highlight()
+		SfxManager.play("ui_navigate")
 		get_viewport().set_input_as_handled()
 		return
 
 	if event.is_action_pressed(prefix + "down") or (event is InputEventKey and event.pressed and event.keycode == KEY_DOWN and player_id == 1):
 		_selected_row = mini(_rows.size() - 1, _selected_row + 1)
 		_update_selection_highlight()
+		SfxManager.play("ui_navigate")
 		get_viewport().set_input_as_handled()
 		return
 
@@ -242,6 +244,7 @@ func _input(event: InputEvent) -> void:
 			row["selected"] = maxi(0, row["selected"] - 1)
 			_update_radio_visuals(_selected_row)
 			_apply_radio_selection(_selected_row)
+			SfxManager.play("ui_select")
 			get_viewport().set_input_as_handled()
 			return
 
@@ -249,6 +252,7 @@ func _input(event: InputEvent) -> void:
 			row["selected"] = mini(row["options"].size() - 1, row["selected"] + 1)
 			_update_radio_visuals(_selected_row)
 			_apply_radio_selection(_selected_row)
+			SfxManager.play("ui_select")
 			get_viewport().set_input_as_handled()
 			return
 
@@ -280,6 +284,7 @@ func _activate_row(row_index: int) -> void:
 		"Flee":
 			_attempt_flee()
 		">> CONFIRM <<":
+			SfxManager.play("ui_confirm")
 			_confirm()
 
 func _open_view_army() -> void:
@@ -325,11 +330,13 @@ func _attempt_flee() -> void:
 	var roll := randf()
 	if roll < flee_chance:
 		# Success — flee
+		SfxManager.play("ui_back")
 		_is_active = false
 		Events.tactician_fled.emit(player_id)
 		fled.emit(player_id)
 	else:
 		# Failed — show feedback, battle starts with penalty
+		SfxManager.play("judgment_bad")
 		var row: Dictionary = _rows[_selected_row]
 		if row["label"]:
 			row["label"].add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))

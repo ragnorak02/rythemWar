@@ -106,6 +106,7 @@ func _resolve_player_hit(grade: String, combo: int, note_type: String) -> void:
 			var dmg: int = int(float(base_dmg) * damage_mult * combo_bonus * result_mult)
 			attacker.call("change_state", 2)  # State.ATTACKING = 2
 			target.call("take_damage", dmg)
+			SfxManager.play("attack_hit")
 			attack_resolved.emit("player", dmg, grade)
 			Events.unit_attacked.emit("player", attacker.get("unit_index"), target.get("unit_index"))
 
@@ -150,6 +151,7 @@ func _enemy_attack() -> void:
 		var dmg: int = attacker.call("get_damage")
 		attacker.call("change_state", 2)  # State.ATTACKING
 		target.call("take_damage", dmg)
+		SfxManager.play("attack_hit")
 		attack_resolved.emit("enemy", dmg, "")
 		Events.unit_attacked.emit("enemy", attacker.get("unit_index"), target.get("unit_index"))
 
