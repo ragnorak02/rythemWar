@@ -14,10 +14,11 @@ A 2D side-view rhythm battler where two armies clash and the player inputs rhyth
 | 4 | InputSetup | `scripts/autoload/input_setup.gd` | Programmatic InputMap (p1_/p2_ prefixes) |
 | 5 | SaveManager | `scripts/autoload/save_manager.gd` | Binary save at user://rhythmwar_save.dat |
 | 6 | AchievementManager | `scripts/autoload/achievement_manager.gd` | Achievement tracking, JSON-driven |
+| 7 | SfxManager | `scripts/autoload/sfx_manager.gd` | Procedural SFX — generates WAVs, polyphonic playback |
 
 ### Key Directories
 ```
-scripts/autoload/    — 6 singleton autoloads
+scripts/autoload/    — 7 singleton autoloads
 scripts/rhythm/      — note_arrow, note_spawner, rhythm_lane, judgment, unit_telegraph
 scripts/battle/      — unit, army, battle, battle_state_machine, ability_system,
                        tactician_mode, engagement_manager, commander_actions_panel,
@@ -75,6 +76,30 @@ Player presses D → rhythm_lane._input() → _on_button_pressed("face_a")
     → achievement_manager tracks → Events.achievement_unlocked
     → hud updates score/combo
 ```
+
+### SFX System
+- **SfxManager** autoload generates 13 placeholder WAV sounds procedurally on `_ready()` using `AudioStreamWAV` (no external audio files needed)
+- Pool of 8 `AudioStreamPlayer` nodes for polyphonic playback; round-robin allocation
+- API: `SfxManager.play("sound_name")` — respects `GameManager.settings.sfx_volume` and `master_volume`
+- Sound library:
+
+| Sound | Type | Use |
+|-------|------|-----|
+| `ui_navigate` | Sine 800Hz 40ms | Menu/list movement |
+| `ui_select` | Sine 1200Hz 80ms | Radio/option toggle |
+| `ui_confirm` | Chord 1000+1500Hz 100ms | Confirm/launch |
+| `ui_back` | Sine 400Hz 100ms | Back/cancel |
+| `attack_hit` | Noise burst 80ms | Sword impact |
+| `attack_miss` | Low noise 200Hz 120ms | Whiff/miss |
+| `judgment_perfect` | Chord 1400+1800Hz 150ms | Perfect hit |
+| `judgment_great` | Sine 1100Hz 120ms | Great hit |
+| `judgment_good` | Sine 800Hz 100ms | Good hit |
+| `judgment_bad` | Sine 350Hz 100ms | Bad hit |
+| `unit_death` | Sweep 600→150Hz 300ms | Unit dies |
+| `battle_victory` | Arpeggio 500→1200Hz 500ms | Win |
+| `battle_defeat` | Arpeggio 500→200Hz 600ms | Lose |
+
+- SFX calls are wired into: main_menu, stage_select, character_select, results_screen, tactician_mode, commander_actions_panel, view_army_modal, rhythm_lane, battle_state_machine, unit, battle
 
 ### Tactician Mode Flow
 ```
