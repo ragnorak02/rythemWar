@@ -1,126 +1,255 @@
-# RhythmWar — 2D Rhythm Battler
+# RhythmWar — Amaris Development Spec
 
-## Overview
-A 2D side-view rhythm battler where two armies clash and the player inputs rhythm commands to attack/defend. Built in Godot 4.6 (GL Compatibility, 1280x720).
+Engine: Godot 4.6  
+Renderer: GL Compatibility  
+Resolution: 1280x720  
+Genre: 2D Rhythm Battler  
+Studio: Amaris  
+Controller Required: Yes  
 
-## Architecture
+---
 
-### Autoloads (load order matters)
-| # | Name | File | Purpose |
-|---|------|------|---------|
-| 1 | Conductor | `scripts/autoload/conductor.gd` | Beat clock + audio sync (system clock approach) |
-| 2 | Events | `scripts/autoload/events.gd` | Signal bus — all cross-system signals |
-| 3 | GameManager | `scripts/autoload/game_manager.gd` | Global session state, scene changes |
-| 4 | InputSetup | `scripts/autoload/input_setup.gd` | Programmatic InputMap (p1_/p2_ prefixes) |
-| 5 | SaveManager | `scripts/autoload/save_manager.gd` | Binary save at user://rhythmwar_save.dat |
-| 6 | AchievementManager | `scripts/autoload/achievement_manager.gd` | Achievement tracking, JSON-driven |
-| 7 | SfxManager | `scripts/autoload/sfx_manager.gd` | Procedural SFX — generates WAVs, polyphonic playback |
+# Amaris Studio Rules
 
-### Key Directories
-```
-scripts/autoload/    — 7 singleton autoloads
-scripts/rhythm/      — note_arrow, note_spawner, rhythm_lane, judgment, unit_telegraph
-scripts/battle/      — unit, army, battle, battle_state_machine, ability_system,
-                       tactician_mode, engagement_manager, commander_actions_panel,
-                       view_army_modal, edit_army_panel
-scripts/ui/          — main_menu, stage_select, character_select, hud, results_screen, achievement_popup
-scripts/tests/       — test_suite
-scenes/              — .tscn files (minimal — all UI is programmatic)
-data/charts/         — stage JSON files (easy_01, medium_01, hard_01)
-data/abilities/      — abilities.json
-data/                — commander_actions.json (pre-battle commander action definitions)
-```
+- `project_status.json` is the single source of truth for dashboard metrics.
+- This file defines architecture, systems, and structured development checkpoints.
+- Do NOT duplicate completion percentages here.
+- Controller-first design is mandatory.
+- All major systems must be testable.
+- Maintain structural consistency with other Amaris games.
 
-### Rhythm System
-- **Conductor** uses `AudioServer.get_time_since_last_mix()` for drift-proof timing
-- **Notes** position from `Conductor.song_position` each frame (not velocity*delta)
-- **Input** via `_input()` event handler (lowest latency for rhythm games)
-- **Judgment windows**: Perfect ±40ms, Great ±75ms, Good ±110ms, Bad ±150ms, Miss beyond
-- **Charts** are JSON with `{ time, button, type }` note arrays
+If a checklist item does not apply, mark it **N/A** rather than deleting it.
 
-### Battle System
-- **Tactician Mode**: Pre-battle preparation screen with formation selection (solo/pair/squad/legion), aggression setting (normal/high), army view/edit, commander actions, and flee option
-- **Micro-Engagement Battlefield**: Units scatter from army columns into 1v1 or 2v2 engagement clusters based on formation choice. Round-robin cycling targets a different engagement per note.
-- **Engagement Manager** (`engagement_manager.gd`): Creates clusters, manages round-robin targeting, draws highlight borders (magenta=active, green=multi-unit)
-- **Commander Actions** (`data/commander_actions.json`): 5 pre-battle actions (+Speed, +Power, +Defense, Sleep Frontline, Reinforcement) with limited uses and RNG success chances
-- 2 armies of 6 units each; formation determines clustering
-- Rhythm hits resolve as attacks; misses let enemy counter-attack
-- Direction combos + RT modifier for Super Strike / Super Counter / Block / Directed Attack
-- 4 special abilities (Team Heal, Iron Skin, Tiger Fury, Auto-Block) with cooldown tracking
-- State machine: TACTICIAN → INTRO → PLAYER_TURN → ENEMY_TURN → CHECK_WIN → loop
-- **On-Unit Telegraph** (`unit_telegraph.gd`): Button icon shown above active engagement unit with glow that intensifies as note approaches; feedback text on hit/miss
-- **Note "?" Reveal**: Notes show "?" until within 300px of judgment line, then reveal actual button letter
+---
 
-### Input Mapping
-| Action | P1 Keyboard | P2 Keyboard | Controller |
-|--------|-------------|-------------|------------|
-| face_a | D | K | A |
-| face_b | F | L | B |
-| face_x | S | J | X |
-| face_y | A | I | Y |
-| directions | W/X/Z/C | Arrow keys | D-pad |
-| modifier | Shift | Ctrl | RT |
+# Project Overview
 
-### Scene Flow
-`MainMenu → StageSelect → CharacterSelect → Battle (Tactician → Engage) → Results → MainMenu`
+RhythmWar is a 2D side-view rhythm battler where two armies clash and the player inputs rhythm commands to attack and defend.
 
-### Signal Flow (Core Loop)
-```
-Player presses D → rhythm_lane._input() → _on_button_pressed("face_a")
-  → NoteSpawner.get_hittable_note() → Judgment.evaluate() → Grade
-  → Events.judgment_made → battle_state_machine resolves attack
-    → engagement_manager.get_active_player/enemy_unit() → targeting
-    → unit.take_damage() → Events.unit_damaged/died
-    → engagement_manager.advance_engagement() → round-robin cycle
-    → unit.show_telegraph_feedback(grade) → on-unit feedback
-    → achievement_manager tracks → Events.achievement_unlocked
-    → hud updates score/combo
-```
+Core Loop:
 
-### SFX System
-- **SfxManager** autoload generates 13 placeholder WAV sounds procedurally on `_ready()` using `AudioStreamWAV` (no external audio files needed)
-- Pool of 8 `AudioStreamPlayer` nodes for polyphonic playback; round-robin allocation
-- API: `SfxManager.play("sound_name")` — respects `GameManager.settings.sfx_volume` and `master_volume`
-- Sound library:
+MainMenu → StageSelect → CharacterSelect → Battle  
+Battle (Tactician Mode → Engagement Phase)  
+→ Results → MainMenu  
 
-| Sound | Type | Use |
-|-------|------|-----|
-| `ui_navigate` | Sine 800Hz 40ms | Menu/list movement |
-| `ui_select` | Sine 1200Hz 80ms | Radio/option toggle |
-| `ui_confirm` | Chord 1000+1500Hz 100ms | Confirm/launch |
-| `ui_back` | Sine 400Hz 100ms | Back/cancel |
-| `attack_hit` | Noise burst 80ms | Sword impact |
-| `attack_miss` | Low noise 200Hz 120ms | Whiff/miss |
-| `judgment_perfect` | Chord 1400+1800Hz 150ms | Perfect hit |
-| `judgment_great` | Sine 1100Hz 120ms | Great hit |
-| `judgment_good` | Sine 800Hz 100ms | Good hit |
-| `judgment_bad` | Sine 350Hz 100ms | Bad hit |
-| `unit_death` | Sweep 600→150Hz 300ms | Unit dies |
-| `battle_victory` | Arpeggio 500→1200Hz 500ms | Win |
-| `battle_defeat` | Arpeggio 500→200Hz 600ms | Lose |
+Combat resolves based on rhythm accuracy and engagement clustering.
 
-- SFX calls are wired into: main_menu, stage_select, character_select, results_screen, tactician_mode, commander_actions_panel, view_army_modal, rhythm_lane, battle_state_machine, unit, battle
+---
 
-### Tactician Mode Flow
-```
-Battle._ready() → Phase A (bg, chart, armies, hud shell) → _setup_tactician_mode()
-  → Player navigates panel (Up/Down rows, Left/Right radio, A/Enter confirm)
-  → tactician_mode.confirmed signal → battle._on_tactician_confirmed()
-  → Phase B: close panel → apply aggression → setup engagement_manager
-    → redistribute_units() (tween animation) → setup rhythm_lane
-    → setup telegraph → setup state_machine → start_battle()
-```
+# Architecture
 
-## Conventions
-- All UI built programmatically in code (no .tscn UI layouts)
-- IIFE-like pattern: autoload singletons, signal-based communication
-- State machines: `enum + match` pattern
-- Chart data: JSON, not hardcoded
-- Tests: `tests/run-tests.bat` → JSON stdout (launcher contract)
+## Autoloads (Load Order Matters)
 
-## Testing
-```
-cd Z:/Development/amatris/rythemWar
+1. Conductor — Beat clock + audio sync  
+2. Events — Signal bus  
+3. GameManager — Global session state  
+4. InputSetup — Programmatic InputMap  
+5. SaveManager — Binary save  
+6. AchievementManager — Achievement tracking  
+7. SfxManager — Procedural SFX generation  
+
+---
+
+## Key Directories
+
+scripts/autoload/  
+scripts/rhythm/  
+scripts/battle/  
+scripts/ui/  
+scripts/tests/  
+data/charts/  
+data/abilities/  
+data/commander_actions.json  
+scenes/  
+
+All UI is built programmatically (minimal .tscn layouts).
+
+---
+
+# Core Systems
+
+## Rhythm System
+
+- Conductor uses `AudioServer.get_time_since_last_mix()` for drift-proof timing
+- Notes position from `Conductor.song_position`
+- `_input()` handler used for lowest latency
+- Judgment windows:
+  - Perfect ±40ms
+  - Great ±75ms
+  - Good ±110ms
+  - Bad ±150ms
+  - Miss beyond
+- Charts are JSON-based
+
+## Battle System
+
+- 2 armies of 6 units
+- Micro-engagement clusters (1v1, 2v2)
+- EngagementManager handles cluster logic + round-robin targeting
+- Commander Actions modify pre-battle state
+- 4 special abilities with cooldown tracking
+- State machine:
+  TACTICIAN → INTRO → PLAYER_TURN → ENEMY_TURN → CHECK_WIN → loop
+- On-unit telegraph system
+- Note reveal mechanic (question mark until proximity)
+
+## Input Mapping
+
+face_a → D / K / Controller A  
+face_b → F / L / Controller B  
+face_x → S / J / Controller X  
+face_y → A / I / Controller Y  
+Directions → W/X/Z/C / Arrow Keys / D-pad  
+Modifier → Shift / Ctrl / RT  
+
+---
+
+# Signal Flow (Core Loop)
+
+Input → RhythmLane → NoteSpawner → Judgment  
+→ Events.judgment_made → battle_state_machine  
+→ engagement_manager targeting  
+→ unit.take_damage  
+→ Events.unit_damaged/died  
+→ achievement_manager  
+→ HUD updates  
+
+---
+
+# SFX System
+
+- Procedural WAV generation
+- 8 AudioStreamPlayer pool
+- 13 placeholder sound types
+- Fully integrated into UI + battle systems
+
+---
+
+# Testing
+
+Run from project root:
+
 tests/run-tests.bat
-```
-Tests cover: judgment windows, combo logic, score values, damage multipliers, chart validation.
+
+Covers:
+- Judgment windows
+- Combo logic
+- Score values
+- Damage multipliers
+- Chart validation
+
+Outputs JSON for launcher contract.
+
+---
+
+# Known Gaps / Current State
+
+- No external music system (SFX only procedural)
+- No visual animation system beyond basic state changes
+- Balance tuning ongoing
+- Engagement clustering needs deeper stress testing
+- Save persistence not fully validated
+- No performance profiling pass completed
+
+---
+
+# Structured Development Checklist (Amaris Standard — 54 Checkpoints)
+
+## Macro Phase 1 — Foundation (1–8)
+
+- [x] 1. Repo standardized
+- [x] 2. Boots without errors
+- [x] 3. Input map created
+- [x] 4. Controller navigation baseline
+- [x] 5. Base scene flow wired
+- [x] 6. Logging/error handling pattern
+- [x] 7. Config/data loading pattern
+- [x] 8. Version/build identifier visible
+
+## Macro Phase 2 — Menus & UX (9–16)
+
+- [x] 9. Main Menu complete
+- [ ] 10. Pause Menu complete
+- [ ] 11. Settings Menu complete
+- [x] 12. Save/Load decision + stub
+- [x] 13. Status/Info screen baseline
+- [x] 14. On-screen control hints
+- [x] 15. UI navigation polish
+- [x] 16. Consistent Back behavior
+
+## Macro Phase 3 — Core Gameplay Loop (17–26)
+
+- [x] 17. Rhythm engine stable under stress
+- [x] 18. Core battle loop start → win/lose works
+- [x] 19. Fail condition validated
+- [x] 20. Success condition validated
+- [x] 21. HUD v0 essentials
+- [x] 22. Feedback baseline (hit/miss clarity)
+- [ ] 23. Pause/resume stable mid-chart
+- [x] 24. Difficulty knobs exist
+- [ ] 25. Tutorial / first-run guidance
+- [x] 26. Restart / rematch flow works
+
+## Macro Phase 4 — Systems Expansion (27–36)
+
+- [x] 27. Engagement clustering stable
+- [x] 28. AI damage/counter logic tuned
+- [x] 29. Commander Actions balanced
+- [x] 30. Special abilities tuned
+- [x] 31. Progression / unlock system baseline
+- [x] 32. Achievement hooks integrated
+- [x] 33. Save persistence validated
+- [x] 34. Chart content pipeline defined
+- [ ] 35. Debug/dev tooling commands
+- [ ] 36. Input remap support (optional)
+
+## Macro Phase 5 — Vertical Slice & Content (37–42)
+
+- [x] 37. First full stage vertical slice complete
+- [x] 38. 3+ chart difficulties playable
+- [ ] 39. Balance pass v1
+- [ ] 40. Boss-stage engagement implemented
+- [ ] 41. Reward loop tuned
+- [ ] 42. UX clarity pass
+
+## Macro Phase 6 — Testing & Stability (43–46)
+
+- [x] 43. Test runner headless stable
+- [x] 44. test_results.json contract implemented
+- [x] 45. Smoke tests cover rhythm + battle loop
+- [ ] 46. Performance baseline verified
+
+## Macro Phase 7 — Visual + Audio + Release (47–54)
+
+- [x] 47. Visual polish pass
+- [x] 48. Placeholder visuals replaced
+- [ ] 49. Combat animation/juice pass
+- [ ] 50. Music integration system added
+- [x] 51. Audio polish pass
+- [x] 52. Controller prompts finalized
+- [ ] 53. Credits screen
+- [ ] 54. Release build verified
+
+---
+
+# Current Focus
+
+Current Goal:  
+Current Task:  
+Work Mode:  
+Next Milestone:  
+
+---
+
+# Automation Reminder
+
+After major updates:
+
+- Update `project_status.json`
+  - macroPhase
+  - subphaseIndex
+  - completionPercent
+  - timestamps
+  - testStatus
+- Commit changes
+- Ensure tests are run before push
