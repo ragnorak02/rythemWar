@@ -50,6 +50,8 @@ func _build_label() -> void:
 func _process(_delta: float) -> void:
 	if was_hit or was_missed:
 		return
+	if not Conductor.is_playing():
+		return
 
 	# Position based on song time difference
 	var time_diff: float = note_time - Conductor.song_position

@@ -19,6 +19,8 @@ var _phase_label: Label = null
 var _player_hp_label: Label = null
 var _enemy_hp_label: Label = null
 var _ability_labels: Array = []
+var _ability_containers: Array = []
+var _round_label: Label = null
 
 const HP_BAR_WIDTH := 300.0
 const HP_BAR_HEIGHT := 16.0
@@ -32,6 +34,7 @@ func setup(player_army: Node2D, enemy_army: Node2D, rhythm_lane: Node2D, ability
 	Events.judgment_made.connect(_on_judgment_made)
 	Events.battle_ended.connect(_on_battle_ended)
 	Events.ability_activated.connect(_on_ability_activated)
+	Events.round_started.connect(_on_round_started)
 
 func _build_ui() -> void:
 	# --- Player side (top-left) ---
@@ -103,6 +106,16 @@ func _build_ui() -> void:
 	_phase_label.add_theme_color_override("font_color", Color(0.94, 0.78, 0.31))
 	add_child(_phase_label)
 
+	# --- Round label (top-center, above phase) ---
+	_round_label = Label.new()
+	_round_label.text = "ROUND 1"
+	_round_label.position = Vector2(560, 35)
+	_round_label.size = Vector2(160, 24)
+	_round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_round_label.add_theme_font_size_override("font_size", 14)
+	_round_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.7))
+	add_child(_round_label)
+
 	# --- Ability bar (bottom-left) ---
 	_build_ability_bar()
 
@@ -155,21 +168,102 @@ func _build_ability_bar() -> void:
 
 	# Ability bar background
 	var bar_bg := ColorRect.new()
-	bar_bg.size = Vector2(660, 28)
-	bar_bg.position = Vector2(10, 676)
+	bar_bg.size = Vector2(1060, 36)
+	bar_bg.position = Vector2(10, 670)
 	bar_bg.color = Color(0.06, 0.05, 0.1, 0.7)
 	add_child(bar_bg)
+
+	# Xbox button colors (jewel style)
+	var ctrl_labels: Array[String] = ["LB", "RB", "LT", "RT"]
+	var ctrl_colors: Array[Color] = [
+		Color(0.35, 0.35, 0.4),   # LB — charcoal
+		Color(0.35, 0.35, 0.4),   # RB — charcoal
+		Color(0.35, 0.35, 0.4),   # LT — charcoal
+		Color(0.35, 0.35, 0.4),   # RT — charcoal
+	]
+	var key_colors: Array[Color] = [
+		Color(0.2, 0.22, 0.3),    # 1
+		Color(0.2, 0.22, 0.3),    # 2
+		Color(0.2, 0.22, 0.3),    # 3
+		Color(0.2, 0.22, 0.3),    # 4
+	]
 
 	var abilities: Array = _ability_system.get_abilities()
 	for i in abilities.size():
 		var ability: Dictionary = abilities[i]
+		var x_base: float = 20.0 + i * 260.0
+		var y_base: float = 674.0
+
+		# Container for whole ability entry (for opacity control)
+		var container := Control.new()
+		container.position = Vector2(x_base, y_base)
+		container.size = Vector2(250, 28)
+		add_child(container)
+		_ability_containers.append(container)
+
+		# Keyboard key badge — small rounded square
+		var kb_color: Color = key_colors[i] if i < key_colors.size() else Color(0.2, 0.22, 0.3)
+		var kb_badge := _create_jewel_badge(str(i + 1), kb_color, 24.0, 24.0)
+		kb_badge.position = Vector2(0, 2)
+		container.add_child(kb_badge)
+
+		# Xbox controller badge — pill shape
+		var ctrl_text: String = ctrl_labels[i] if i < ctrl_labels.size() else ""
+		var ctrl_color: Color = ctrl_colors[i] if i < ctrl_colors.size() else Color(0.35, 0.35, 0.4)
+		var ctrl_badge := _create_jewel_badge(ctrl_text, ctrl_color, 36.0, 24.0)
+		ctrl_badge.position = Vector2(28, 2)
+		container.add_child(ctrl_badge)
+
+		# Ability name label
 		var label := Label.new()
-		label.text = "[%d] %s" % [i + 1, ability["name"]]
-		label.position = Vector2(20 + i * 160, 680)
+		label.text = ability["name"] + " READY"
+		label.position = Vector2(68, 2)
+		label.size = Vector2(180, 24)
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		label.add_theme_font_size_override("font_size", 13)
 		label.add_theme_color_override("font_color", Color(ability.get("color", "#ffffff")))
-		add_child(label)
+		container.add_child(label)
 		_ability_labels.append(label)
+
+func _create_jewel_badge(text: String, bg_color: Color, w: float, h: float) -> Panel:
+	var panel := Panel.new()
+	panel.size = Vector2(w, h)
+
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg_color
+
+	# Rounded corners — fully round for square badges, pill for wide ones
+	var radius := int(h / 2.0)
+	style.corner_radius_top_left = radius
+	style.corner_radius_top_right = radius
+	style.corner_radius_bottom_left = radius
+	style.corner_radius_bottom_right = radius
+
+	# Subtle border for jewel edge
+	style.border_width_top = 1
+	style.border_width_bottom = 1
+	style.border_width_left = 1
+	style.border_width_right = 1
+	style.border_color = bg_color.lightened(0.35)
+
+	# Inner shadow at bottom for 3D jewel look
+	style.shadow_color = Color(0, 0, 0, 0.3)
+	style.shadow_size = 1
+	style.shadow_offset = Vector2(0, 1)
+
+	panel.add_theme_stylebox_override("panel", style)
+
+	# Letter label centered inside
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.size = Vector2(w, h)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.add_theme_font_size_override("font_size", 11)
+	lbl.add_theme_color_override("font_color", Color.WHITE)
+	panel.add_child(lbl)
+
+	return panel
 
 func _process(_delta: float) -> void:
 	_update_hp_bars()
@@ -204,12 +298,13 @@ func _update_ability_labels() -> void:
 			break
 		var cd: int = _ability_system.get_cooldown(abilities[i]["id"])
 		var label: Label = _ability_labels[i]
+		var container: Control = _ability_containers[i]
 		if cd > 0:
-			label.text = "[%d] %s (CD:%d)" % [i + 1, abilities[i]["name"], cd]
-			label.modulate.a = 0.4
+			label.text = "%s (CD:%d)" % [abilities[i]["name"], cd]
+			container.modulate.a = 0.4
 		else:
-			label.text = "[%d] %s READY" % [i + 1, abilities[i]["name"]]
-			label.modulate.a = 1.0
+			label.text = "%s READY" % abilities[i]["name"]
+			container.modulate.a = 1.0
 
 func _on_judgment_made(_player_id: int, grade: String, _combo: int, _note_type: String) -> void:
 	_phase_label.text = grade
@@ -220,12 +315,12 @@ func _on_battle_ended(winner: String) -> void:
 		"player":
 			_phase_label.text = "VICTORY!"
 			_phase_label.add_theme_color_override("font_color", Color(0.94, 0.78, 0.31))
-		"enemy":
+		_:
 			_phase_label.text = "DEFEAT"
 			_phase_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2))
-		_:
-			_phase_label.text = "DRAW"
-			_phase_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+
+func _on_round_started(round_number: int) -> void:
+	_round_label.text = "ROUND %d" % round_number
 
 func _on_ability_activated(_player_id: int, ability_id: String) -> void:
 	# Flash ability name on screen

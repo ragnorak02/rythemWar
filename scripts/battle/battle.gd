@@ -12,6 +12,11 @@ var _ability_system: Node = null
 var _hud: CanvasLayer = null
 var _chart_data: Dictionary = {}
 var _battle_active: bool = false
+var _pause_menu: CanvasLayer = null
+var _is_paused: bool = false
+var _current_round: int = 0
+var _round_results: Array = []
+var _between_round_panel: CanvasLayer = null
 
 # New systems
 var _tactician_mode: CanvasLayer = null
@@ -200,7 +205,7 @@ func _start_phase_b() -> void:
 
 	# Connect signals and start
 	_connect_signals()
-	_start_battle()
+	_start_round()
 
 func _apply_aggression(aggression: String) -> void:
 	if aggression == "high":
@@ -282,11 +287,16 @@ func _connect_signals() -> void:
 	Events.note_missed.connect(_on_note_missed)
 	Events.song_finished.connect(_on_song_finished)
 	Events.battle_ended.connect(_on_battle_ended)
+	Events.round_completed.connect(_on_round_completed)
 	_state_machine.attack_resolved.connect(_on_attack_resolved)
 
-func _start_battle() -> void:
+func _start_round() -> void:
+	_current_round += 1
 	_battle_active = true
-	Events.battle_started.emit(_chart_data.get("stage_id", "unknown"))
+	Events.round_started.emit(_current_round)
+
+	if _current_round == 1:
+		Events.battle_started.emit(_chart_data.get("stage_id", "unknown"))
 
 	# Create placeholder audio and start
 	var stream := _create_placeholder_audio()
@@ -294,7 +304,10 @@ func _start_battle() -> void:
 	var offset: float = _chart_data.get("offset_sec", 0.0)
 	Conductor.play_song(stream, bpm, offset)
 
-	_state_machine.start_battle()
+	if _current_round == 1:
+		_state_machine.start_battle()
+	else:
+		_state_machine.start_new_round()
 
 func _create_placeholder_audio() -> AudioStream:
 	var sample_rate := 44100
@@ -310,7 +323,9 @@ func _create_placeholder_audio() -> AudioStream:
 	stream.data = data
 	return stream
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
+	if _is_paused:
+		return
 	# Telegraph coordinator — shows button prompts above active engagement unit
 	if _telegraph_coordinator_active and _battle_active and _rhythm_lane and _engagement_manager:
 		_update_telegraph()
@@ -374,6 +389,90 @@ func _on_song_finished() -> void:
 	if _battle_active:
 		_state_machine.on_song_finished()
 
+func _on_round_completed(_round_number: int, _player_hp: int, _enemy_hp: int) -> void:
+	_battle_active = false
+	_telegraph_coordinator_active = false
+	Conductor.stop_song()
+
+	# Store this round's rhythm results
+	_round_results.append(_rhythm_lane.get_results())
+
+	# Tick buffs and cooldowns between rounds
+	_player_army.tick_all_buffs()
+	_enemy_army.tick_all_buffs()
+	if _ability_system:
+		_ability_system.tick_cooldowns()
+
+	# Show between-round panel
+	_between_round_panel = CanvasLayer.new()
+	_between_round_panel.set_script(preload("res://scripts/battle/between_round_panel.gd"))
+	add_child(_between_round_panel)
+	_between_round_panel.setup(
+		_current_round,
+		_player_army.get_total_hp(),
+		_player_army.get_max_total_hp(),
+		_enemy_army.get_total_hp(),
+		_enemy_army.get_max_total_hp()
+	)
+	_between_round_panel.stance_confirmed.connect(_on_stance_confirmed)
+
+func _on_stance_confirmed(stance: String) -> void:
+	if _between_round_panel:
+		_between_round_panel.close()
+		_between_round_panel = null
+
+	_apply_stance(stance)
+
+	# Reload chart on rhythm lane for next round
+	_rhythm_lane.load_chart(_chart_data)
+
+	# Re-setup engagement manager for surviving units
+	_engagement_manager.setup(_player_army, _enemy_army, _tactician_config.get("formation", "solo"))
+	_engagement_manager.redistribute_units()
+
+	# Brief delay before next round
+	await get_tree().create_timer(0.8).timeout
+	_telegraph_coordinator_active = true
+	_start_round()
+
+func _apply_stance(stance: String) -> void:
+	match stance:
+		"all_offense":
+			_player_army.apply_damage_boost_all(1)
+		"all_defense":
+			_player_army.apply_shield_all(1)
+		"balanced":
+			pass
+		"regroup":
+			_player_army.heal_all(15)
+
+func _build_cumulative_results() -> Dictionary:
+	## Combine rhythm results across all rounds into cumulative totals.
+	var cumulative := {
+		"score": 0,
+		"combo": 0,
+		"perfects": 0,
+		"greats": 0,
+		"goods": 0,
+		"bads": 0,
+		"misses": 0,
+		"total_notes": 0,
+	}
+	for rd in _round_results:
+		cumulative["score"] += rd.get("score", 0)
+		cumulative["combo"] = maxi(cumulative["combo"], rd.get("combo", 0))
+		cumulative["perfects"] += rd.get("perfects", 0)
+		cumulative["greats"] += rd.get("greats", 0)
+		cumulative["goods"] += rd.get("goods", 0)
+		cumulative["bads"] += rd.get("bads", 0)
+		cumulative["misses"] += rd.get("misses", 0)
+		cumulative["total_notes"] += rd.get("total_notes", 0)
+
+	var total: int = cumulative["total_notes"]
+	var hits: int = total - cumulative["misses"]
+	cumulative["accuracy"] = (float(hits) / float(maxi(total, 1))) * 100.0
+	return cumulative
+
 func _on_battle_ended(winner: String) -> void:
 	_battle_active = false
 	_telegraph_coordinator_active = false
@@ -383,13 +482,18 @@ func _on_battle_ended(winner: String) -> void:
 	else:
 		SfxManager.play("battle_defeat")
 
-	# Store results
-	var results: Dictionary = _rhythm_lane.get_results()
+	# Store final round results
+	_round_results.append(_rhythm_lane.get_results())
+
+	# Build cumulative results across all rounds
+	var results: Dictionary = _build_cumulative_results()
 	results["winner"] = winner
 	results["stage_id"] = _chart_data.get("stage_id", "unknown")
+	results["total_rounds"] = _current_round
+	results["round_details"] = _round_results
+	results["player_id"] = 1
 	if _rhythm_lane_p2:
 		results["p2"] = _rhythm_lane_p2.get_results()
-		# In 2P mode, winner is whoever scored higher
 		if results["p2"]["score"] > results["score"]:
 			results["winner"] = "player2"
 	GameManager.last_results = results
@@ -409,9 +513,15 @@ func _on_attack_resolved(attacker_side: String, damage: int, grade: String) -> v
 	pass
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
-		Conductor.stop_song()
-		Events.scene_change_requested.emit("res://scenes/MainMenu.tscn")
+	# Block input while paused (pause_menu handles resume via signals)
+	if _is_paused:
+		return
+
+	# Pause
+	if event.is_action_pressed("ui_pause") and _battle_active:
+		get_viewport().set_input_as_handled()
+		_pause_battle()
+		return
 
 	# Ability hotkeys: 1-4
 	if event is InputEventKey and event.pressed and _battle_active:
@@ -424,3 +534,43 @@ func _input(event: InputEvent) -> void:
 			KEY_4: key_index = 3
 		if key_index >= 0 and key_index < abilities.size():
 			_ability_system.activate(1, abilities[key_index]["id"])
+
+func _pause_battle() -> void:
+	_is_paused = true
+	Conductor.pause_song()
+	get_tree().paused = true
+	Events.game_paused.emit()
+
+	_pause_menu = CanvasLayer.new()
+	_pause_menu.set_script(preload("res://scripts/ui/pause_menu.gd"))
+	add_child(_pause_menu)
+	_pause_menu.resumed.connect(_resume_battle)
+	_pause_menu.restarted.connect(_restart_battle)
+	_pause_menu.quit_to_menu.connect(_quit_to_menu)
+
+func _resume_battle() -> void:
+	if _pause_menu:
+		_pause_menu.queue_free()
+		_pause_menu = null
+	get_tree().paused = false
+	Conductor.resume_song()
+	_is_paused = false
+	Events.game_resumed.emit()
+
+func _restart_battle() -> void:
+	if _pause_menu:
+		_pause_menu.queue_free()
+		_pause_menu = null
+	get_tree().paused = false
+	_is_paused = false
+	Conductor.stop_song()
+	Events.scene_change_requested.emit("res://scenes/Battle.tscn")
+
+func _quit_to_menu() -> void:
+	if _pause_menu:
+		_pause_menu.queue_free()
+		_pause_menu = null
+	get_tree().paused = false
+	_is_paused = false
+	Conductor.stop_song()
+	Events.scene_change_requested.emit("res://scenes/MainMenu.tscn")

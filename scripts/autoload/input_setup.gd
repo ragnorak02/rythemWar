@@ -72,6 +72,11 @@ func _setup_ui_inputs() -> void:
 	_add_key_action("ui_menu_confirm", KEY_ENTER)
 	_add_key_action("ui_menu_back", KEY_ESCAPE)
 
+	# Pause
+	_add_key_action("ui_pause", KEY_ESCAPE)
+	_add_joy_action("ui_pause", JOY_BUTTON_START, 0)
+	_add_joy_action("ui_pause", JOY_BUTTON_START, 1)
+
 func _add_key_action(action_name: String, key: Key) -> void:
 	if not InputMap.has_action(action_name):
 		InputMap.add_action(action_name)

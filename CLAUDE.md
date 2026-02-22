@@ -169,7 +169,7 @@ Outputs JSON for launcher contract.
 ## Macro Phase 2 — Menus & UX (9–16)
 
 - [x] 9. Main Menu complete
-- [ ] 10. Pause Menu complete
+- [x] 10. Pause Menu complete
 - [ ] 11. Settings Menu complete
 - [x] 12. Save/Load decision + stub
 - [x] 13. Status/Info screen baseline
@@ -185,7 +185,7 @@ Outputs JSON for launcher contract.
 - [x] 20. Success condition validated
 - [x] 21. HUD v0 essentials
 - [x] 22. Feedback baseline (hit/miss clarity)
-- [ ] 23. Pause/resume stable mid-chart
+- [x] 23. Pause/resume stable mid-chart
 - [x] 24. Difficulty knobs exist
 - [ ] 25. Tutorial / first-run guidance
 - [x] 26. Restart / rematch flow works

@@ -17,6 +17,9 @@ func setup(lane: Node2D, player_id: int = 1) -> void:
 	_note_scene = preload("res://scenes/rhythm/NoteArrow.tscn")
 
 func load_chart(chart_data: Dictionary) -> void:
+	for note in _active_notes:
+		if is_instance_valid(note):
+			note.queue_free()
 	_chart_notes.clear()
 	_spawn_index = 0
 	_active_notes.clear()

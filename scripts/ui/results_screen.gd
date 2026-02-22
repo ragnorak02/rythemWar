@@ -35,12 +35,9 @@ func _build_ui() -> void:
 		"player":
 			winner_label.text = "VICTORY!"
 			winner_label.add_theme_color_override("font_color", Color(0.94, 0.78, 0.31))
-		"enemy":
+		_:
 			winner_label.text = "DEFEAT"
 			winner_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2))
-		_:
-			winner_label.text = "DRAW"
-			winner_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
 	add_child(winner_label)
 
 	# Stage name
@@ -52,6 +49,18 @@ func _build_ui() -> void:
 	stage_label.add_theme_font_size_override("font_size", 18)
 	stage_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.7))
 	add_child(stage_label)
+
+	# Round count (only show if multi-round battle)
+	var total_rounds: int = _results.get("total_rounds", 1)
+	if total_rounds > 1:
+		var round_label := Label.new()
+		round_label.text = "Rounds: %d" % total_rounds
+		round_label.position = Vector2(340, 118)
+		round_label.size = Vector2(600, 24)
+		round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		round_label.add_theme_font_size_override("font_size", 15)
+		round_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.6))
+		add_child(round_label)
 
 	# P1 stats
 	_build_player_stats(_results, Vector2(140, 150), "PLAYER 1")

@@ -11,7 +11,9 @@ signal song_finished()
 
 # --- Battle ---
 signal battle_started(stage_id: String)
-signal battle_ended(winner: String)  # "player" / "enemy" / "draw"
+signal battle_ended(winner: String)  # "player" / "enemy"
+signal round_completed(round_number: int, player_hp: int, enemy_hp: int)
+signal round_started(round_number: int)
 signal turn_started(turn_number: int, is_player_turn: bool)
 signal turn_ended(turn_number: int)
 signal unit_attacked(attacker_army: String, attacker_index: int, target_index: int)

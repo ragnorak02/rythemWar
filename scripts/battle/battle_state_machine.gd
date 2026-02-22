@@ -2,7 +2,7 @@ extends Node
 ## BattleStateMachine — manages turn sequencing for the rhythm battle.
 ## Flow: TACTICIAN -> INTRO -> PLAYER_TURN -> RESOLVE_ATTACK -> ENEMY_TURN -> CHECK_WIN -> loop
 
-enum BattlePhase { TACTICIAN, INTRO, PLAYER_TURN, RESOLVE_ATTACK, ENEMY_TURN, CHECK_WIN, VICTORY, DEFEAT, DRAW }
+enum BattlePhase { TACTICIAN, INTRO, PLAYER_TURN, RESOLVE_ATTACK, ENEMY_TURN, CHECK_WIN, VICTORY, DEFEAT }
 
 signal phase_changed(phase: BattlePhase)
 signal attack_resolved(attacker_side: String, damage: int, grade: String)
@@ -193,8 +193,24 @@ func _check_win() -> void:
 		_change_phase(BattlePhase.DEFEAT)
 		Events.battle_ended.emit("enemy")
 	else:
-		_change_phase(BattlePhase.DRAW)
-		Events.battle_ended.emit("draw")
+		# Both armies alive — round complete, battle continues
+		Events.round_completed.emit(
+			turn_number,
+			player_army.call("get_total_hp"),
+			enemy_army.call("get_total_hp")
+		)
+
+func start_new_round() -> void:
+	## Begin a new round without resetting turn_number (cooldowns accumulate).
+	_reduce_enemy_attacks = 0
+	_skip_enemy_first = false
+	_pending_grade = ""
+	_pending_note_type = ""
+	_pending_combo = 0
+	_attack_result_type = "normal"
+	_change_phase(BattlePhase.INTRO)
+	await get_tree().create_timer(0.5).timeout
+	_start_player_turn()
 
 func set_attack_result_type(result_type: String) -> void:
 	_attack_result_type = result_type
