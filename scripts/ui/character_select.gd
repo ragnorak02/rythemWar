@@ -8,11 +8,29 @@ var _p2_selected_index: int = 1
 var _preview_containers: Array[Node2D] = []
 var _selecting_p2: bool = false
 
+# Composition editing phase
+var _editing_composition: bool = false
+var _composition: Array = ["soldier", "soldier", "archer", "mage", "heavy", "soldier"]
+var _comp_slot_index: int = 0
+var _available_types: Array = ["soldier", "archer", "mage", "heavy"]
+var _unit_types_data: Array = []
+var _comp_slot_labels: Array = []
+var _comp_panel: Node2D = null
+
 func _ready() -> void:
 	RenderingServer.set_default_clear_color(Color(0.05, 0.04, 0.09))
+	_load_unit_types()
 	_setup_variants()
 	_build_ui()
 	_update_selection()
+
+func _load_unit_types() -> void:
+	var file := FileAccess.open("res://data/unit_types.json", FileAccess.READ)
+	if file:
+		var data: Dictionary = JSON.parse_string(file.get_as_text())
+		file.close()
+		_unit_types_data = data.get("unit_types", [])
+		_composition = data.get("default_composition", _composition).duplicate()
 
 func _setup_variants() -> void:
 	_variants = [
@@ -129,6 +147,10 @@ func _build_ui() -> void:
 	add_child(hint)
 
 func _input(event: InputEvent) -> void:
+	if _editing_composition:
+		_handle_composition_input(event)
+		return
+
 	if event.is_action_pressed("ui_menu_right") or event.is_action_pressed("p1_right"):
 		if not _selecting_p2:
 			_selected_index = mini(_selected_index + 1, _variants.size() - 1)
@@ -157,6 +179,45 @@ func _input(event: InputEvent) -> void:
 		else:
 			Events.scene_change_requested.emit("res://scenes/StageSelect.tscn")
 		get_viewport().set_input_as_handled()
+
+func _handle_composition_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_menu_right") or event.is_action_pressed("p1_right"):
+		_comp_slot_index = mini(_comp_slot_index + 1, 5)
+		_update_composition_display()
+		SfxManager.play("ui_navigate")
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_menu_left") or event.is_action_pressed("p1_left"):
+		_comp_slot_index = maxi(_comp_slot_index - 1, 0)
+		_update_composition_display()
+		SfxManager.play("ui_navigate")
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_menu_up") or event.is_action_pressed("p1_up"):
+		_cycle_unit_type(_comp_slot_index, 1)
+		SfxManager.play("ui_navigate")
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_menu_down") or event.is_action_pressed("p1_down"):
+		_cycle_unit_type(_comp_slot_index, -1)
+		SfxManager.play("ui_navigate")
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_menu_confirm") or event.is_action_pressed("p1_face_a"):
+		SfxManager.play("ui_confirm")
+		_confirm_composition()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_menu_back") or event.is_action_pressed("p1_face_b"):
+		SfxManager.play("ui_back")
+		_exit_composition_editor()
+		get_viewport().set_input_as_handled()
+
+func _cycle_unit_type(slot: int, direction: int) -> void:
+	var current_type: String = _composition[slot]
+	var current_idx: int = _available_types.find(current_type)
+	if current_idx < 0:
+		current_idx = 0
+	current_idx = (current_idx + direction) % _available_types.size()
+	if current_idx < 0:
+		current_idx = _available_types.size() - 1
+	_composition[slot] = _available_types[current_idx]
+	_update_composition_display()
 
 func _update_selection() -> void:
 	for i in _preview_containers.size():
@@ -192,14 +253,148 @@ func _confirm() -> void:
 		_update_selection()
 		return
 
-	# Store selections and go to battle
+	# Store color selections
 	GameManager.selected_chart["p1_army_color"] = _variants[_selected_index]["color"]
 	GameManager.selected_chart["p1_army_name"] = _variants[_selected_index]["name"]
 	if GameManager.is_2p:
 		GameManager.selected_chart["p2_army_color"] = _variants[_p2_selected_index]["color"]
 		GameManager.selected_chart["p2_army_name"] = _variants[_p2_selected_index]["name"]
 
+	# Enter composition editing phase
+	_enter_composition_editor()
+
+func _enter_composition_editor() -> void:
+	_editing_composition = true
+	_comp_slot_index = 0
+
+	# Dim color selection UI
+	for container in _preview_containers:
+		container.modulate = Color(0.3, 0.3, 0.3)
+
+	# Update title
+	var title_node := get_node_or_null("Title")
+	if title_node:
+		title_node.text = "CUSTOMIZE ARMY COMPOSITION"
+
+	# Build composition panel
+	_comp_panel = Node2D.new()
+	_comp_panel.position = Vector2(0, 0)
+	add_child(_comp_panel)
+
+	var slot_width := 140.0
+	var start_x := (1280.0 - 6 * slot_width) / 2.0
+	_comp_slot_labels.clear()
+
+	for i in 6:
+		var slot_x := start_x + i * slot_width
+
+		# Slot background
+		var slot_bg := ColorRect.new()
+		slot_bg.size = Vector2(120, 100)
+		slot_bg.position = Vector2(slot_x, 440)
+		slot_bg.color = Color(0.1, 0.1, 0.15, 0.9)
+		_comp_panel.add_child(slot_bg)
+
+		# Slot number
+		var num_label := Label.new()
+		num_label.text = "Slot %d" % (i + 1)
+		num_label.position = Vector2(slot_x, 420)
+		num_label.size = Vector2(120, 20)
+		num_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		num_label.add_theme_font_size_override("font_size", 11)
+		num_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.6))
+		_comp_panel.add_child(num_label)
+
+		# Type name label
+		var type_label := Label.new()
+		type_label.position = Vector2(slot_x, 455)
+		type_label.size = Vector2(120, 25)
+		type_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		type_label.add_theme_font_size_override("font_size", 16)
+		_comp_panel.add_child(type_label)
+
+		# Button letter label
+		var btn_label := Label.new()
+		btn_label.position = Vector2(slot_x, 485)
+		btn_label.size = Vector2(120, 25)
+		btn_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		btn_label.add_theme_font_size_override("font_size", 13)
+		btn_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.7))
+		_comp_panel.add_child(btn_label)
+
+		# Up/down arrows hint
+		var arrow_label := Label.new()
+		arrow_label.position = Vector2(slot_x, 510)
+		arrow_label.size = Vector2(120, 20)
+		arrow_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		arrow_label.add_theme_font_size_override("font_size", 11)
+		arrow_label.add_theme_color_override("font_color", Color(0.4, 0.4, 0.5))
+		_comp_panel.add_child(arrow_label)
+
+		_comp_slot_labels.append({"type": type_label, "button": btn_label, "bg": slot_bg, "arrow": arrow_label})
+
+	# Hint label
+	var hint := Label.new()
+	hint.text = "Left/Right = select slot  |  Up/Down = change type  |  A = confirm  |  B = back"
+	hint.position = Vector2(240, 560)
+	hint.size = Vector2(800, 30)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.add_theme_font_size_override("font_size", 13)
+	hint.add_theme_color_override("font_color", Color(0.4, 0.4, 0.5))
+	_comp_panel.add_child(hint)
+
+	_update_composition_display()
+
+func _update_composition_display() -> void:
+	for i in 6:
+		var type_id: String = _composition[i]
+		var type_data: Dictionary = _get_type_data_for_id(type_id)
+		var slot: Dictionary = _comp_slot_labels[i]
+
+		slot["type"].text = type_data.get("name", type_id.capitalize())
+		var btn_name: String = type_data.get("button", "face_a")
+		slot["button"].text = "Button: %s" % _get_button_letter(btn_name)
+
+		# Highlight selected slot
+		if i == _comp_slot_index:
+			slot["bg"].color = Color(0.15, 0.15, 0.25, 1.0)
+			slot["type"].add_theme_color_override("font_color", Color(0.94, 0.78, 0.31))
+			slot["arrow"].text = "^ v"
+		else:
+			slot["bg"].color = Color(0.1, 0.1, 0.15, 0.9)
+			slot["type"].add_theme_color_override("font_color", Color(0.8, 0.8, 0.9))
+			slot["arrow"].text = ""
+
+func _get_type_data_for_id(type_id: String) -> Dictionary:
+	for td in _unit_types_data:
+		if td.get("id", "") == type_id:
+			return td
+	return {"name": type_id.capitalize(), "button": "face_a"}
+
+func _get_button_letter(btn: String) -> String:
+	match btn:
+		"face_a": return "A"
+		"face_b": return "B"
+		"face_x": return "X"
+		"face_y": return "Y"
+		_: return "?"
+
+func _confirm_composition() -> void:
+	GameManager.selected_chart["army_composition"] = _composition.duplicate()
 	Events.scene_change_requested.emit("res://scenes/Battle.tscn")
+
+func _exit_composition_editor() -> void:
+	_editing_composition = false
+	if _comp_panel:
+		_comp_panel.queue_free()
+		_comp_panel = null
+	_comp_slot_labels.clear()
+
+	# Restore color selection UI
+	_update_selection()
+	var title_node := get_node_or_null("Title")
+	if title_node:
+		title_node.text = "SELECT YOUR ARMY"
 
 
 ## Inner class for drawing army crest emblems

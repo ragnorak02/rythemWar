@@ -31,6 +31,9 @@ var _modifier_action: String = ""
 var _held_direction: String = ""  # "up", "down", "left", "right" or ""
 var _modifier_held: bool = false
 
+# Soft failure: consecutive miss tracking for grace period
+var _consecutive_misses: int = 0
+
 func _ready() -> void:
 	_setup_button_mapping()
 	_build_visuals()
@@ -154,6 +157,7 @@ func _reset_stats() -> void:
 	greats = 0
 	goods = 0
 	bads = 0
+	_consecutive_misses = 0
 
 func _process(_delta: float) -> void:
 	# Track held directions and modifier
@@ -197,6 +201,9 @@ func _on_button_pressed(button_name: String) -> void:
 	var result_type: String = _determine_result_type(note.note_type)
 
 	note.hit(grade)
+
+	# Reset consecutive miss tracker on any successful hit
+	_consecutive_misses = 0
 
 	# Update combo
 	if Judgment.keeps_combo(grade):
@@ -267,9 +274,12 @@ func _on_note_missed(missed_player_id: int, _note_type: String) -> void:
 		return
 	SfxManager.play("attack_miss")
 	total_misses += 1
-	if combo > 0:
-		Events.combo_broken.emit(player_id, combo)
-	combo = 0
+	_consecutive_misses += 1
+	# Grace period: combo only breaks after MISS_GRACE_COUNT consecutive misses
+	if Judgment.should_break_combo(Judgment.GRADE_MISS, _consecutive_misses):
+		if combo > 0:
+			Events.combo_broken.emit(player_id, combo)
+		combo = 0
 	_show_judgment(Judgment.GRADE_MISS)
 	_update_combo_display()
 

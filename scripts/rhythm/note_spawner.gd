@@ -11,6 +11,9 @@ var _note_scene: PackedScene = null
 var _lane_node: Node2D = null
 var _player_id: int = 1
 
+# Unit-based button remapping: maps original chart button -> active unit's button
+var _button_remap: Dictionary = {}
+
 func setup(lane: Node2D, player_id: int = 1) -> void:
 	_lane_node = lane
 	_player_id = player_id
@@ -59,6 +62,10 @@ func _spawn_note(note_data: Dictionary) -> void:
 func _clean_dead_notes() -> void:
 	_active_notes = _active_notes.filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
 
+func set_button_remap(remap: Dictionary) -> void:
+	## Set button remap so all chart buttons map to the active unit's button.
+	_button_remap = remap
+
 ## Find closest active note matching the pressed button within judgment range
 func get_hittable_note(pressed_button: String) -> Node2D:
 	var best_note: Node2D = null
@@ -67,7 +74,9 @@ func get_hittable_note(pressed_button: String) -> Node2D:
 	for note in _active_notes:
 		if not is_instance_valid(note) or note.was_hit or note.was_missed:
 			continue
-		if note.button != pressed_button:
+		# Apply remap: the note's chart button maps to the active unit's assigned button
+		var effective_button: String = _button_remap.get(note.button, note.button)
+		if effective_button != pressed_button:
 			continue
 
 		var diff: float = absf(Conductor.song_position - note.note_time)

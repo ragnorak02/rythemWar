@@ -122,8 +122,8 @@ func _test_damage_multiplier_perfect() -> void:
 
 func _test_damage_multiplier_miss() -> void:
 	var mult := Judgment.get_damage_multiplier(Judgment.GRADE_MISS)
-	_assert(mult == 0.0, "damage_mult_miss_0",
-		"Expected 0.0, got %f" % mult)
+	_assert(mult == 0.25, "damage_mult_miss_0.25",
+		"Expected 0.25 (soft failure), got %f" % mult)
 
 # --- Chart Data Tests ---
 

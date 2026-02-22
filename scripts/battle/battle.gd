@@ -69,12 +69,17 @@ func _load_chart() -> void:
 			file.close()
 
 func _setup_armies() -> void:
+	var composition: Array = GameManager.selected_chart.get("army_composition", [])
+
 	# Player army — left side
 	_player_army = Node2D.new()
 	_player_army.set_script(preload("res://scripts/battle/army.gd"))
 	_player_army.position = Vector2(200, 280)
 	add_child(_player_army)
-	_player_army.setup("player")
+	if composition.size() > 0:
+		_player_army.setup_with_types("player", composition)
+	else:
+		_player_army.setup("player")
 
 	# Enemy army — right side
 	_enemy_army = Node2D.new()
@@ -288,6 +293,9 @@ func _connect_signals() -> void:
 	Events.song_finished.connect(_on_song_finished)
 	Events.battle_ended.connect(_on_battle_ended)
 	Events.round_completed.connect(_on_round_completed)
+	Events.turn_started.connect(_on_turn_started)
+	Events.turn_ended.connect(_on_turn_ended)
+	Events.engagement_activated.connect(_on_engagement_activated)
 	_state_machine.attack_resolved.connect(_on_attack_resolved)
 
 func _start_round() -> void:
@@ -356,7 +364,13 @@ func _update_telegraph() -> void:
 
 	if next_note:
 		var time_until: float = next_note.note_time - Conductor.song_position
-		active_unit.show_telegraph_button(next_note.button, time_until)
+		# Show active unit's assigned button if army has mixed types
+		var show_button: String = next_note.button
+		if not _is_uniform_army():
+			show_button = active_unit.get("assigned_button")
+			if not show_button or show_button.is_empty():
+				show_button = next_note.button
+		active_unit.show_telegraph_button(show_button, time_until)
 
 		# Hide telegraph on all other player units
 		for unit in _player_army.get_alive_units():
@@ -507,6 +521,55 @@ func _on_battle_ended(winner: String) -> void:
 	# Transition to results screen after delay
 	await get_tree().create_timer(1.5).timeout
 	Events.scene_change_requested.emit("res://scenes/Results.tscn")
+
+func _on_turn_started(turn_number: int, is_player_turn: bool) -> void:
+	for unit in _player_army.get_alive_units():
+		unit.set_turn_active(is_player_turn)
+	for unit in _enemy_army.get_alive_units():
+		unit.set_turn_active(not is_player_turn)
+
+func _on_turn_ended(turn_number: int) -> void:
+	for unit in _player_army.get_alive_units():
+		unit.set_turn_neutral()
+	for unit in _enemy_army.get_alive_units():
+		unit.set_turn_neutral()
+
+func _on_engagement_activated(index: int, player_units: Array, enemy_units: Array) -> void:
+	_update_note_remap()
+
+func _update_note_remap() -> void:
+	## Remap all chart buttons to the active unit's assigned button.
+	if not _engagement_manager or not _rhythm_lane:
+		return
+	var active_unit: Node2D = _engagement_manager.get_active_player_unit()
+	if not active_unit:
+		return
+	var unit_button: String = active_unit.get("assigned_button")
+	if not unit_button or unit_button.is_empty():
+		return
+	# If army is uniform (all same button), no remap needed
+	if _is_uniform_army():
+		_rhythm_lane._spawner.set_button_remap({})
+		return
+	# Remap all chart buttons to this unit's button
+	var remap := {
+		"face_a": unit_button,
+		"face_b": unit_button,
+		"face_x": unit_button,
+		"face_y": unit_button,
+	}
+	_rhythm_lane._spawner.set_button_remap(remap)
+
+func _is_uniform_army() -> bool:
+	## Returns true if all alive player units have the same assigned button.
+	var alive: Array = _player_army.get_alive_units()
+	if alive.size() <= 1:
+		return true
+	var first_button: String = alive[0].assigned_button
+	for unit in alive:
+		if unit.assigned_button != first_button:
+			return false
+	return true
 
 func _on_attack_resolved(attacker_side: String, damage: int, grade: String) -> void:
 	# Could spawn damage number popup here

@@ -17,6 +17,12 @@ var defense: int = 5
 var is_alive: bool = true
 var engagement_index: int = -1  # Which engagement cluster this unit belongs to
 
+# Unit type properties
+var unit_type_id: String = "soldier"
+var assigned_button: String = "face_a"
+var hold_release: bool = false
+var weapon_style: String = "sword"
+
 var _telegraph: Node2D = null
 
 var _state: State = State.IDLE
@@ -30,6 +36,16 @@ var _shield_turns: int = 0
 var _idle_bob: float = 0.0
 var _shield_alpha: float = 0.0
 var _boost_alpha: float = 0.0
+
+# Turn ownership dim/glow
+var _dim_amount: float = 0.0
+var _target_dim: float = 0.0
+var _active_glow_phase: float = 0.0
+
+# Enemy attack telegraph
+var _attack_telegraph_active: bool = false
+var _attack_telegraph_timer: float = 0.0
+const ATTACK_TELEGRAPH_DURATION := 0.6
 
 # HP bar nodes (still ColorRect for clean UI rendering)
 var _hp_bar_bg: ColorRect = null
@@ -48,6 +64,32 @@ func setup(p_index: int, p_side: String, p_color: Color) -> void:
 	_original_color = p_color
 	_draw_color = p_color
 	queue_redraw()
+
+func setup_type(type_data: Dictionary) -> void:
+	## Apply unit type stats, button, weapon style, and color tint.
+	unit_type_id = type_data.get("id", "soldier")
+	assigned_button = type_data.get("button", "face_a")
+	hold_release = type_data.get("hold_release", false)
+	weapon_style = type_data.get("weapon_style", "sword")
+	base_damage = type_data.get("base_damage", 15)
+	defense = type_data.get("defense", 5)
+	max_hp = type_data.get("max_hp", 100)
+	hp = max_hp
+	_update_hp_bar()
+	# Blend type tint 30% with army color
+	var type_tint: Color = _get_type_tint(unit_type_id)
+	_original_color = _original_color.lerp(type_tint, 0.3)
+	_draw_color = _original_color
+	queue_redraw()
+
+func _get_type_tint(type_id: String) -> Color:
+	match type_id:
+		"soldier": return Color(0.5, 0.5, 0.6)
+		"archer":  return Color(0.3, 0.7, 0.3)
+		"mage":    return Color(0.6, 0.3, 0.9)
+		"heavy":   return Color(0.7, 0.5, 0.2)
+		"elite":   return Color(0.9, 0.8, 0.3)
+		_:         return Color(0.5, 0.5, 0.5)
 
 func _build_visuals() -> void:
 	# HP bar background
@@ -86,6 +128,21 @@ func _process(delta: float) -> void:
 		if _flash_timer <= 0:
 			_draw_color = _original_color
 
+	# Turn ownership dim smoothing
+	_dim_amount = move_toward(_dim_amount, _target_dim, delta * 2.0)
+
+	# Active glow phase (for gold pulse when not dimmed and alive)
+	if _dim_amount < 0.01 and is_alive and _target_dim == 0.0:
+		_active_glow_phase += delta * 4.0
+	else:
+		_active_glow_phase = 0.0
+
+	# Enemy attack telegraph countdown
+	if _attack_telegraph_active:
+		_attack_telegraph_timer -= delta
+		if _attack_telegraph_timer <= 0:
+			_attack_telegraph_active = false
+
 	# Buff visual alpha decay
 	if _shield_turns > 0:
 		_shield_alpha = 0.3
@@ -103,12 +160,30 @@ func _draw() -> void:
 	var facing: float = 1.0 if army_side == "player" else -1.0
 	var bob := Vector2(0, _idle_bob)
 
+	# Apply turn ownership dim to draw color
+	var effective_color: Color = _draw_color.darkened(_dim_amount)
+
+	# --- Active glow arc (gold pulse when it's your turn) ---
+	if _active_glow_phase > 0.0 and is_alive:
+		var glow_alpha := 0.15 + 0.1 * sin(_active_glow_phase)
+		draw_arc(Vector2(0, bob.y), 20.0, 0, TAU, 24, Color(0.94, 0.78, 0.31, glow_alpha), 2.0)
+
+	# --- Enemy attack telegraph (red-orange glow + "!" warning) ---
+	if _attack_telegraph_active:
+		var t_alpha := clampf(_attack_telegraph_timer / ATTACK_TELEGRAPH_DURATION, 0.0, 1.0)
+		var flash := 0.5 + 0.5 * sin(_attack_telegraph_timer * 20.0)
+		draw_circle(Vector2(0, bob.y), 22.0, Color(1.0, 0.4, 0.1, t_alpha * 0.4 * flash))
+		var font := ThemeDB.fallback_font
+		if font:
+			var warn_color := Color(1.0, 0.3, 0.0, t_alpha)
+			draw_string(font, Vector2(-5, -BODY_SIZE.y / 2 - 14 + bob.y), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, warn_color)
+
 	# --- Shadow (ellipse on ground) ---
 	var shadow_color := Color(0.0, 0.0, 0.0, 0.3)
 	draw_ellipse_custom(Vector2(0, BODY_SIZE.y / 2 + 2), Vector2(10, 4), shadow_color)
 
 	# --- Legs (two small rects) ---
-	var leg_color := _draw_color.darkened(0.3)
+	var leg_color := effective_color.darkened(0.3)
 	var leg_w := 5.0
 	var leg_h := 10.0
 	var leg_y := BODY_SIZE.y / 2 - leg_h + bob.y
@@ -124,28 +199,54 @@ func _draw() -> void:
 		Vector2(8, body_top),
 		Vector2(10, body_top + body_h),
 	])
-	draw_colored_polygon(body_points, _draw_color)
+	draw_colored_polygon(body_points, effective_color)
 
 	# --- Shoulder pauldrons ---
-	var pauldron_color := _draw_color.lightened(0.15)
+	var pauldron_color := effective_color.lightened(0.15)
 	draw_rect(Rect2(Vector2(-12, body_top - 1), Vector2(6, 6)), pauldron_color)
 	draw_rect(Rect2(Vector2(6, body_top - 1), Vector2(6, 6)), pauldron_color)
 
 	# --- Head (circle) ---
 	var head_center := Vector2(0, -BODY_SIZE.y / 2 + 4 + bob.y)
 	var head_radius := 7.0
-	draw_circle(head_center, head_radius, _draw_color.lightened(0.2))
+	draw_circle(head_center, head_radius, effective_color.lightened(0.2))
 	# Helmet visor
 	var visor_y := head_center.y + 1
-	draw_rect(Rect2(Vector2(-5, visor_y), Vector2(10, 3)), _draw_color.darkened(0.4))
+	draw_rect(Rect2(Vector2(-5, visor_y), Vector2(10, 3)), effective_color.darkened(0.4))
 
-	# --- Weapon (sword or spear — facing direction) ---
+	# --- Weapon (varies by weapon_style) ---
 	var weapon_color := Color(0.7, 0.7, 0.8)
 	var weapon_base := Vector2(8 * facing, body_top + 4 + bob.y)
-	var weapon_tip := weapon_base + Vector2(14 * facing, -8)
-	draw_line(weapon_base, weapon_tip, weapon_color, 2.0)
-	# Hilt
-	draw_line(weapon_base + Vector2(-2 * facing, 0), weapon_base + Vector2(2 * facing, 0), Color(0.5, 0.35, 0.2), 2.0)
+	match weapon_style:
+		"bow":
+			# Bow arc + arrow
+			var bow_center := weapon_base + Vector2(6 * facing, -4)
+			draw_arc(bow_center, 10.0, -PI * 0.4, PI * 0.4, 12, Color(0.6, 0.4, 0.2), 2.0)
+			var arrow_start := bow_center + Vector2(-4 * facing, 0)
+			var arrow_end := arrow_start + Vector2(14 * facing, 0)
+			draw_line(arrow_start, arrow_end, weapon_color, 1.5)
+		"staff":
+			# Tall staff with orb
+			var staff_bottom := weapon_base + Vector2(2 * facing, 6)
+			var staff_top := staff_bottom + Vector2(0, -22)
+			draw_line(staff_bottom, staff_top, Color(0.5, 0.35, 0.2), 2.0)
+			draw_circle(staff_top, 3.5, Color(0.6, 0.3, 0.9, 0.8))
+		"hammer":
+			# Heavy hammer head
+			var handle_end := weapon_base + Vector2(12 * facing, -6)
+			draw_line(weapon_base, handle_end, Color(0.5, 0.35, 0.2), 2.5)
+			draw_rect(Rect2(handle_end - Vector2(3, 3), Vector2(6, 8)), weapon_color)
+		"lance":
+			# Long lance
+			var lance_tip := weapon_base + Vector2(20 * facing, -10)
+			draw_line(weapon_base, lance_tip, weapon_color, 2.0)
+			# Pennant
+			draw_line(lance_tip, lance_tip + Vector2(-4 * facing, 4), Color(0.9, 0.2, 0.2, 0.7), 1.5)
+		_:  # "sword" default
+			var weapon_tip := weapon_base + Vector2(14 * facing, -8)
+			draw_line(weapon_base, weapon_tip, weapon_color, 2.0)
+			# Hilt
+			draw_line(weapon_base + Vector2(-2 * facing, 0), weapon_base + Vector2(2 * facing, 0), Color(0.5, 0.35, 0.2), 2.0)
 
 	# --- Shield buff overlay ---
 	if _shield_alpha > 0.01:
@@ -221,6 +322,16 @@ func apply_damage_boost(turns: int) -> void:
 
 func apply_shield(turns: int) -> void:
 	_shield_turns = turns
+
+func set_turn_active(is_active: bool) -> void:
+	_target_dim = 0.0 if is_active else 0.4
+
+func set_turn_neutral() -> void:
+	_target_dim = 0.0
+
+func show_attack_telegraph() -> void:
+	_attack_telegraph_active = true
+	_attack_telegraph_timer = ATTACK_TELEGRAPH_DURATION
 
 func tick_buffs() -> void:
 	if _damage_boost_turns > 0:

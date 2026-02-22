@@ -63,15 +63,10 @@ func on_judgment_made(player_id: int, grade: String, combo: int, note_type: Stri
 func on_note_missed(player_id: int, note_type: String) -> void:
 	if current_phase != BattlePhase.PLAYER_TURN:
 		return
-	_enemy_attack()
-	# Advance engagement on miss too
-	if _engagement_manager:
-		_engagement_manager.advance_engagement()
+	# Soft failure: miss still deals reduced damage (0.25x), no free enemy attack
+	_resolve_player_hit(Judgment.GRADE_MISS, 0, note_type)
 
 func _resolve_player_hit(grade: String, combo: int, note_type: String) -> void:
-	if grade == Judgment.GRADE_MISS:
-		return
-
 	var damage_mult: float = Judgment.get_damage_multiplier(grade)
 	var combo_bonus: float = 1.0 + (mini(combo, 50) * 0.02)
 
@@ -173,6 +168,14 @@ func _do_enemy_turn() -> void:
 	for i in attacks:
 		if skip_first and i == 0:
 			continue
+		# Show telegraph on upcoming attacker before the delay
+		var upcoming_attacker: Node2D = null
+		if _engagement_manager:
+			upcoming_attacker = _engagement_manager.get_active_enemy_unit()
+		else:
+			upcoming_attacker = enemy_army.call("get_front_unit")
+		if upcoming_attacker and upcoming_attacker.has_method("show_attack_telegraph"):
+			upcoming_attacker.show_attack_telegraph()
 		await get_tree().create_timer(0.4).timeout
 		_enemy_attack()
 		if enemy_army.call("is_defeated"):

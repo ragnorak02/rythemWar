@@ -5,6 +5,10 @@ var army_side: String = "player"  # "player" or "enemy"
 var units: Array = []
 var alive_count: int = 6
 
+# Unit type data
+var _unit_types_data: Array = []
+var _composition: Array = []
+
 const UNIT_COUNT := 6
 const UNIT_SCENE := preload("res://scenes/units/Unit.tscn")
 
@@ -41,6 +45,57 @@ func setup(side: String) -> void:
 		units.append(unit_node)
 
 	alive_count = UNIT_COUNT
+
+func setup_with_types(side: String, composition: Array) -> void:
+	## Setup army with specific unit types per slot.
+	army_side = side
+	_composition = composition
+	_load_unit_types()
+	var base_color: Color = PLAYER_COLOR if side == "player" else ENEMY_COLOR
+
+	for i in UNIT_COUNT:
+		var unit_node: Node2D = UNIT_SCENE.instantiate()
+		add_child(unit_node)
+
+		var offset: Vector2 = FORMATION[i]
+		if side == "enemy":
+			offset.x *= -1
+
+		unit_node.position = offset
+		var color_variation := base_color.lightened(randf_range(-0.05, 0.1))
+		unit_node.setup(i, side, color_variation)
+
+		# Apply unit type if available
+		var type_id: String = composition[i] if i < composition.size() else "soldier"
+		var type_data: Dictionary = _get_type_data(type_id)
+		if not type_data.is_empty():
+			unit_node.setup_type(type_data)
+
+		unit_node.unit_died.connect(_on_unit_died)
+		units.append(unit_node)
+
+	alive_count = UNIT_COUNT
+
+func _load_unit_types() -> void:
+	if not _unit_types_data.is_empty():
+		return
+	var file := FileAccess.open("res://data/unit_types.json", FileAccess.READ)
+	if file:
+		var data: Dictionary = JSON.parse_string(file.get_as_text())
+		file.close()
+		_unit_types_data = data.get("unit_types", [])
+
+func _get_type_data(type_id: String) -> Dictionary:
+	_load_unit_types()
+	for td in _unit_types_data:
+		if td.get("id", "") == type_id:
+			return td
+	return {}
+
+func get_unit_button_for_index(idx: int) -> String:
+	if idx < units.size():
+		return units[idx].assigned_button
+	return "face_a"
 
 func get_alive_units() -> Array:
 	return units.filter(func(u): return u.is_alive)

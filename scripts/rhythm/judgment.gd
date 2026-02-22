@@ -57,6 +57,9 @@ static func evaluate(song_position: float, note_time: float) -> String:
 static func keeps_combo(grade: String) -> bool:
 	return grade in COMBO_GRADES
 
+## Number of consecutive misses allowed before combo breaks
+const MISS_GRACE_COUNT := 1
+
 ## Returns damage multiplier for battle system
 static func get_damage_multiplier(grade: String) -> float:
 	match grade:
@@ -64,4 +67,13 @@ static func get_damage_multiplier(grade: String) -> float:
 		GRADE_GREAT:   return 1.2
 		GRADE_GOOD:    return 1.0
 		GRADE_BAD:     return 0.5
-		_:             return 0.0
+		_:             return 0.25
+
+## Returns true if combo should break given the grade and consecutive miss count
+static func should_break_combo(grade: String, consecutive_misses: int) -> bool:
+	if grade in COMBO_GRADES:
+		return false
+	if grade == GRADE_BAD:
+		return true
+	# MISS: grace period allows 1 miss without breaking combo
+	return consecutive_misses > MISS_GRACE_COUNT

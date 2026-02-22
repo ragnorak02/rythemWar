@@ -14,6 +14,10 @@ var _feedback_y_offset: float = 0.0
 var _glow_intensity: float = 0.0
 var _pulse_phase: float = 0.0
 
+# Shrinking target ring
+var _ring_radius: float = 40.0
+const RING_MAX_RADIUS := 40.0
+
 # Ability prompt state
 var _ability_button: String = ""
 var _ability_showing: bool = false
@@ -31,6 +35,13 @@ func _process(delta: float) -> void:
 			_glow_intensity = 1.0 - (_time_until / PULSE_THRESHOLD)
 		else:
 			_glow_intensity = 0.3
+
+		# Shrinking ring: lerp from max to icon edge as note approaches
+		if _is_showing and _time_until < SHOW_THRESHOLD:
+			var t: float = 1.0 - (_time_until / SHOW_THRESHOLD)
+			_ring_radius = lerpf(RING_MAX_RADIUS, ICON_RADIUS, t)
+		else:
+			_ring_radius = RING_MAX_RADIUS
 
 	# Feedback fade
 	if _feedback_alpha > 0:
@@ -51,9 +62,26 @@ func _draw() -> void:
 	if _feedback_alpha > 0 and _feedback_text != "":
 		_draw_feedback()
 
+func _draw_shrinking_ring(center: Vector2, color: Color) -> void:
+	## Draw an outer ring that shrinks toward the button edge. White flash when close.
+	var proximity: float = _ring_radius - ICON_RADIUS
+	var max_dist: float = RING_MAX_RADIUS - ICON_RADIUS
+	var alpha: float = 0.3 + 0.7 * (1.0 - clampf(proximity / max_dist, 0.0, 1.0))
+	var ring_color := Color(color.r, color.g, color.b, alpha)
+
+	# White flash when ring is within 3px of target
+	if proximity <= 3.0:
+		ring_color = Color(1.0, 1.0, 1.0, 0.9)
+
+	draw_arc(center, _ring_radius, 0, TAU, 32, ring_color, 2.0)
+
 func _draw_button_icon(center: Vector2, btn: String) -> void:
 	var color := _get_button_color(btn)
 	var pulse := 0.8 + 0.2 * sin(_pulse_phase)
+
+	# Shrinking target ring (only for note telegraph, not ability)
+	if _is_showing:
+		_draw_shrinking_ring(center, color)
 
 	# Outer glow
 	var glow_alpha := _glow_intensity * 0.4 * pulse
@@ -94,6 +122,7 @@ func hide_button() -> void:
 	_button_name = ""
 	_time_until = 999.0
 	_glow_intensity = 0.0
+	_ring_radius = RING_MAX_RADIUS
 
 func show_feedback(grade: String) -> void:
 	_feedback_text = grade

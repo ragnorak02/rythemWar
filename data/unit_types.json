@@ -1,0 +1,10 @@
+{
+  "unit_types": [
+    { "id": "soldier", "name": "Soldier", "button": "face_a", "base_damage": 15, "defense": 5, "max_hp": 100, "weapon_style": "sword" },
+    { "id": "archer",  "name": "Archer",  "button": "face_x", "base_damage": 18, "defense": 3, "max_hp": 80,  "weapon_style": "bow" },
+    { "id": "mage",    "name": "Mage",    "button": "face_y", "base_damage": 20, "defense": 2, "max_hp": 70,  "weapon_style": "staff" },
+    { "id": "heavy",   "name": "Heavy",   "button": "face_b", "base_damage": 12, "defense": 8, "max_hp": 130, "weapon_style": "hammer" },
+    { "id": "elite",   "name": "Elite",   "button": "face_a", "hold_release": true, "base_damage": 22, "defense": 6, "max_hp": 110, "weapon_style": "lance" }
+  ],
+  "default_composition": ["soldier", "soldier", "archer", "mage", "heavy", "soldier"]
+}
